@@ -58,7 +58,21 @@ export function deepSortKeys(obj: any): any {
   return obj;
 }
 
-export const generateStableKey = async (url: string | URL, method: string, body?: any): Promise<string | null> => {
+export const INTELLIGENT_KEY_FIELDS = ['model', 'messages', 'prompt', 'system', 'contents', 'message'];
+
+function filterIntelligentBody(obj: any): any {
+  if (!isPlainObject(obj)) return obj;
+  const filtered: any = {};
+  for (const key of INTELLIGENT_KEY_FIELDS) {
+    if (obj[key] !== undefined) {
+      filtered[key] = obj[key];
+    }
+  }
+  if (Object.keys(filtered).length === 0) return obj;
+  return filtered;
+}
+
+export const generateStableKey = async (url: string | URL, method: string, body?: any, strategy: 'intelligent' | 'exact' | ((u: string, m: string, b: any) => any) = 'intelligent'): Promise<string | null> => {
   const urlStr = url.toString();
 
   // We only track POST/PUT for LLMs typically, but let's allow GET if it has query params
@@ -74,6 +88,12 @@ export const generateStableKey = async (url: string | URL, method: string, body?
       }
     } else {
       parsedBody = body;
+    }
+
+    if (typeof strategy === 'function') {
+      parsedBody = strategy(urlStr, method, parsedBody);
+    } else if (strategy === 'intelligent') {
+      parsedBody = filterIntelligentBody(parsedBody);
     }
 
     if (isPlainObject(parsedBody) || Array.isArray(parsedBody)) {

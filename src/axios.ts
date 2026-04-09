@@ -28,8 +28,14 @@ export const hookAxios = (axiosInstance: any) => {
     
     if (isAI) {
       // Force Axios to utilize the `fetch` adapter.
-      // Requires Axios >= 1.7.0. For older versions, this might fall back to XHR or throw,
-      // but it is the safest, zero-dependency way to bridge Axios to our guarded fetch.
+      // Requires Axios >= 1.7.0.
+      if (axiosInstance.VERSION) {
+        const [major, minor] = axiosInstance.VERSION.split('.').map(Number);
+        if (major < 1 || (major === 1 && minor < 7)) {
+          console.warn(`[Quota Guard] Axios version ${axiosInstance.VERSION} lacks native fetch adapter support. Guard disabled for this instance.`);
+          return config;
+        }
+      }
       config.adapter = 'fetch';
     }
     

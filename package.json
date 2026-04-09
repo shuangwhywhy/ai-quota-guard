@@ -11,7 +11,10 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
-    "./register": "./dist/register.js",
+    "./register": {
+      "import": "./dist/register.mjs",
+      "require": "./dist/register.js"
+    },
     "./vite": {
       "types": "./dist/vite.d.ts",
       "import": "./dist/vite.mjs",
@@ -36,6 +39,9 @@
   ],
   "author": "qyz",
   "license": "MIT",
+  "dependencies": {
+    "@mswjs/interceptors": "^0.36.0"
+  },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "tsup": "^8.0.0",

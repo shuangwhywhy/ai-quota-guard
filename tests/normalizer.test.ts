@@ -17,6 +17,22 @@ describe('Key Normalizer (Crypto Branches)', () => {
     expect(key1?.length).toBeGreaterThan(32); // SHA-256 hex is 64 chars
   });
 
+  it('filters out noise and ensures hash stability using intelligent strategy', async () => {
+    const url = 'https://api.openai.com/v1/chat';
+    const body1 = { model: 'gpt-4', messages: [], stream: true, temperature: 0.5 };
+    const body2 = { model: 'gpt-4', messages: [], stream: false, temperature: 0.7, top_p: 1.0 };
+    
+    // With 'intelligent' strategy, noisy params are ignored
+    const key1 = await generateStableKey(url, 'POST', body1, 'intelligent');
+    const key2 = await generateStableKey(url, 'POST', body2, 'intelligent');
+    expect(key1).toBe(key2);
+
+    // With 'exact' strategy, they result in different keys
+    const keyExact1 = await generateStableKey(url, 'POST', body1, 'exact');
+    const keyExact2 = await generateStableKey(url, 'POST', body2, 'exact');
+    expect(keyExact1).not.toBe(keyExact2);
+  });
+
   it('falls back to node crypto when globalThis.crypto is unavailable', async () => {
     // Hide WebCrypto temporarily
     const originalCrypto = globalThis.crypto;

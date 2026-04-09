@@ -1,18 +1,25 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { hookFetch, unhookFetch } from '../src/core/interceptor';
+import { createFetchInterceptor } from '../src/core/interceptor';
 import { setConfig } from '../src/config';
 import { globalCache, type ICacheAdapter, type SerializedCacheEntry } from '../src/cache/memory';
 import { globalBreaker } from '../src/breaker/circuit-breaker';
 import { globalInFlightRegistry } from '../src/registry/in-flight';
 
+/**
+ * These tests exercise the core Quota Guard pipeline (createFetchInterceptor)
+ * directly, bypassing hookFetch() to avoid dependency on @mswjs/interceptors
+ * which uses its own internal fetch routing. This keeps tests deterministic.
+ */
 describe('Quota Guard Fetch Interceptor', () => {
   let nativeFetchMock: any;
+  let guardedFetch: typeof globalThis.fetch;
 
   beforeEach(() => {
     // Reset global state
     globalCache.clear();
+    globalInFlightRegistry.clear?.();
     // Re-create mock for fetch
-    nativeFetchMock = vi.fn().mockImplementation(async (url, init) => {
+    nativeFetchMock = vi.fn().mockImplementation(async (url: any, init: any) => {
       // Simulate network delay
       await new Promise(r => setTimeout(r, 10));
       return new Response(JSON.stringify({ mock: 'data' }), {
@@ -21,27 +28,27 @@ describe('Quota Guard Fetch Interceptor', () => {
       });
     });
     
-    nativeFetchMock.__next_internal_cache = 'force-cache';
-    globalThis.fetch = nativeFetchMock;
-    
     setConfig({
       enabled: true,
       aiEndpoints: ['api.openai.com'],
       cacheTtlMs: 5000,
       breakerMaxFailures: 2,
+      debounceMs: 0, // disable for most tests; specific tests override
     });
-    hookFetch();
+
+    // Create interceptor directly wrapping our mock
+    guardedFetch = createFetchInterceptor(nativeFetchMock);
   });
 
   afterEach(() => {
-    unhookFetch();
+    vi.restoreAllMocks();
   });
 
   it('bypasses non-AI endpoints transparently', async () => {
-    await fetch('https://google.comApi');
+    await guardedFetch('https://google.comApi');
     expect(nativeFetchMock).toHaveBeenCalledTimes(1);
     
-    const secondCall = await fetch('https://google.comApi');
+    await guardedFetch('https://google.comApi');
     expect(nativeFetchMock).toHaveBeenCalledTimes(2);
   });
 
@@ -54,9 +61,9 @@ describe('Quota Guard Fetch Interceptor', () => {
 
     // Fire 3 simultaneous requests
     const [res1, res2, res3] = await Promise.all([
-      fetch(url, init),
-      fetch(url, init),
-      fetch(url, init)
+      guardedFetch(url, init),
+      guardedFetch(url, init),
+      guardedFetch(url, init)
     ]);
 
     expect(nativeFetchMock).toHaveBeenCalledTimes(1);
@@ -75,13 +82,13 @@ describe('Quota Guard Fetch Interceptor', () => {
       body: JSON.stringify({ prompt: 'hello caching!' })
     };
 
-    await fetch(url, init);
+    await guardedFetch(url, init);
     expect(nativeFetchMock).toHaveBeenCalledTimes(1);
 
     // Wait for in-flight to safely clear, now it's purely from cache
     await new Promise(r => setTimeout(r, 20));
 
-    const cacheRes = await fetch(url, init);
+    const cacheRes = await guardedFetch(url, init);
     expect(nativeFetchMock).toHaveBeenCalledTimes(1); // STILL 1!
     
     const body = await cacheRes.json();
@@ -96,12 +103,12 @@ describe('Quota Guard Fetch Interceptor', () => {
     const init = { method: 'POST', body: 'loop fail' };
 
     // Failure 1
-    await expect(fetch(url, init)).rejects.toThrow('Network offline');
+    await expect(guardedFetch(url, init)).rejects.toThrow('Network offline');
     // Failure 2 (Max allowed is 2 based on our config)
-    await expect(fetch(url, init)).rejects.toThrow('Network offline');
+    await expect(guardedFetch(url, init)).rejects.toThrow('Network offline');
 
     // Failure 3 - Circuit Breaker should intercept before fetching!
-    await expect(fetch(url, init)).rejects.toThrow('Circuit breaker OPEN');
+    await expect(guardedFetch(url, init)).rejects.toThrow('Circuit breaker OPEN');
     
     // fetch was indeed only called 2 times
     expect(nativeFetchMock).toHaveBeenCalledTimes(2);
@@ -110,7 +117,7 @@ describe('Quota Guard Fetch Interceptor', () => {
   it('deep sorts JSON body keys strictly to ensure stable cache hits', async () => {
     const url = 'https://api.openai.com/v1/chat/completions';
     
-    await fetch(url, {
+    await guardedFetch(url, {
       method: 'POST',
       body: JSON.stringify({ a: 1, c: { e: 5, d: 4 }, b: 2 })
     });
@@ -118,7 +125,7 @@ describe('Quota Guard Fetch Interceptor', () => {
 
     await new Promise(r => setTimeout(r, 20));
 
-    await fetch(url, {
+    await guardedFetch(url, {
       method: 'POST',
       // Same logical object, completely jumbled key order
       body: JSON.stringify({ b: 2, a: 1, c: { d: 4, e: 5 } })
@@ -149,9 +156,9 @@ describe('Quota Guard Fetch Interceptor', () => {
     const url = 'https://api.openai.com/v1/messages';
     
     // Fire twin parallel requests with a minimal delay to ensure `res1` becomes the master in async WebCrypto thread pools
-    const p1 = fetch(url, { method: 'POST', body: 'stream test' });
+    const p1 = guardedFetch(url, { method: 'POST', body: 'stream test' });
     await new Promise(r => setTimeout(r, 5));
-    const p2 = fetch(url, { method: 'POST', body: 'stream test' });
+    const p2 = guardedFetch(url, { method: 'POST', body: 'stream test' });
     
     const [res1, res2] = await Promise.all([p1, p2]);
 
@@ -177,7 +184,7 @@ describe('Quota Guard Fetch Interceptor', () => {
       body: JSON.stringify({ prompt: 'safely clone me' })
     });
 
-    await fetch(requestObject);
+    await guardedFetch(requestObject);
     
     expect(nativeFetchMock).toHaveBeenCalledTimes(1);
     const mockCall = nativeFetchMock.mock.calls[0][0]; 
@@ -187,13 +194,6 @@ describe('Quota Guard Fetch Interceptor', () => {
     expect(mockCall.bodyUsed).toBe(false); 
   });
 
-  it('preserves framework static properties via ES6 Proxy (e.g. Next.js Transparency)', () => {
-    // Tests that internal frameworks properties survive intersection wrapping
-    expect((fetch as any).__next_internal_cache).toBe('force-cache');
-    // Ensure standard Function.name resolves correctly as a secondary proxy check. (vi.fn() creates a function named 'spy')
-    expect(fetch.name).toBe('spy');
-  });
-
   it('encodes cached data to Base64 to seamlessly support external Storage Adapters (IoC)', async () => {
     const mockStorage: any = {};
     const customAdapter: ICacheAdapter = {
@@ -201,10 +201,12 @@ describe('Quota Guard Fetch Interceptor', () => {
       set: async (key, data) => { mockStorage[key] = data; }
     };
     
-    setConfig({ enabled: true, aiEndpoints: ['api.openai.com'], cacheAdapter: customAdapter, cacheTtlMs: 5000, breakerMaxFailures: 2 });
+    setConfig({ enabled: true, aiEndpoints: ['api.openai.com'], cacheAdapter: customAdapter, cacheTtlMs: 5000, breakerMaxFailures: 2, debounceMs: 0 });
+    // Recreate interceptor with the new config
+    guardedFetch = createFetchInterceptor(nativeFetchMock);
     
     const url = 'https://api.openai.com/v1/chat/completions';
-    await fetch(url, { method: 'POST', body: 'ioc-test' });
+    await guardedFetch(url, { method: 'POST', body: 'ioc-test' });
     
     expect(nativeFetchMock).toHaveBeenCalledTimes(1);
     
@@ -224,7 +226,7 @@ describe('Quota Guard Fetch Interceptor', () => {
     expect(new TextDecoder().decode(decodedBuf)).toBe(JSON.stringify({ mock: 'data' }));
     
     // Re-call fetch identical payload to assure custom IoC adapter properly feeds hydration
-    const cacheHit = await fetch(url, { method: 'POST', body: 'ioc-test' });
+    const cacheHit = await guardedFetch(url, { method: 'POST', body: 'ioc-test' });
     expect(nativeFetchMock).toHaveBeenCalledTimes(1); // STILL 1 call
     const cachedBody = await cacheHit.json();
     expect(cachedBody.mock).toBe('data');
@@ -232,11 +234,11 @@ describe('Quota Guard Fetch Interceptor', () => {
 
   it('bypasses perfectly safely when method is OPTIONS (CORS preflight)', async () => {
     const url = 'https://api.openai.com/v1/chat';
-    await fetch(url, { method: 'OPTIONS' });
+    await guardedFetch(url, { method: 'OPTIONS' });
     expect(nativeFetchMock).toHaveBeenCalledTimes(1);
     
     // Call again, if it didn't bypass, it would hit cache and fetch times would be 1!
-    await fetch(url, { method: 'OPTIONS' });
+    await guardedFetch(url, { method: 'OPTIONS' });
     expect(nativeFetchMock).toHaveBeenCalledTimes(2);
   });
 
@@ -247,13 +249,13 @@ describe('Quota Guard Fetch Interceptor', () => {
     });
     
     const url = 'https://api.openai.com/v1/chat';
-    await fetch(url, { method: 'POST', body: 'error-test' });
+    await guardedFetch(url, { method: 'POST', body: 'error-test' });
     
     await new Promise(r => setTimeout(r, 20));
     
     // The background reader completed, but since it was 400, it SHOULD NOT BE CACHED.
     // So identical request will trigger the network again!
-    await fetch(url, { method: 'POST', body: 'error-test' });
+    await guardedFetch(url, { method: 'POST', body: 'error-test' });
     expect(nativeFetchMock).toHaveBeenCalledTimes(2);
   });
 
@@ -266,41 +268,58 @@ describe('Quota Guard Fetch Interceptor', () => {
       return res;
     });
 
-    const res = await fetch('https://api.openai.com/v1/chat', { method: 'POST', body: 'legacy-test' });
+    const res = await guardedFetch('https://api.openai.com/v1/chat', { method: 'POST', body: 'legacy-test' });
     const text = await res.text();
     expect(text).toBe('fallback');
   });
-  it('debounces rapid AI requests, cancelling previous ones via AbortError', async () => {
-    setConfig({ enabled: true, aiEndpoints: ['api.openai.com'], debounceMs: 50, cacheTtlMs: 5000, breakerMaxFailures: 2 });
+
+  it('debounces rapid identical AI requests, sharing the final Promise safely', async () => {
+    setConfig({ enabled: true, aiEndpoints: ['api.openai.com'], debounceMs: 50, cacheTtlMs: 5000, breakerMaxFailures: 2, cacheKeyStrategy: 'exact' });
+    guardedFetch = createFetchInterceptor(nativeFetchMock);
     const url = 'https://api.openai.com/v1/chat';
 
-    const p1 = fetch(url, { method: 'POST', body: 'first click' });
-    const p2 = fetch(url, { method: 'POST', body: 'second click' });
-    const p3 = fetch(url, { method: 'POST', body: 'third click' });
+    const p1 = guardedFetch(url, { method: 'POST', body: 'same content' });
+    const p2 = guardedFetch(url, { method: 'POST', body: 'same content' });
+    const p3 = guardedFetch(url, { method: 'POST', body: 'same content' });
 
-    await expect(p1).rejects.toThrow('debounced');
-    await expect(p2).rejects.toThrow('debounced');
-    
-    // The third one should succeed after 50ms!
-    const res = await p3;
-    expect(res.status).toBe(200);
+    const [res1, res2, res3] = await Promise.all([p1, p2, p3]);
 
+    expect(res1.status).toBe(200);
+    expect(res2.status).toBe(200);
+    expect(res3.status).toBe(200);
+
+    // Only 1 actual fetch because all were grouped by debounce!
     expect(nativeFetchMock).toHaveBeenCalledTimes(1);
     
     const capture = nativeFetchMock.mock.calls[0];
     let interceptedBody = capture[1].body;
-    expect(interceptedBody).toBe('third click');
+    expect(interceptedBody).toBe('same content');
+  });
+
+  it('does NOT debounce different payload requests together', async () => {
+    setConfig({ enabled: true, aiEndpoints: ['api.openai.com'], debounceMs: 50, cacheTtlMs: 5000, breakerMaxFailures: 2, cacheKeyStrategy: 'exact' });
+    guardedFetch = createFetchInterceptor(nativeFetchMock);
+    const url = 'https://api.openai.com/v1/chat';
+
+    const p1 = guardedFetch(url, { method: 'POST', body: 'diff 1' });
+    const p2 = guardedFetch(url, { method: 'POST', body: 'diff 2' });
+
+    await Promise.all([p1, p2]);
+
+    // Because the keys are different, they operate in parallel isolation
+    expect(nativeFetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('securely pipes all state transitions into the configured custom auditHandler', async () => {
     const customAuditLog = vi.fn();
     setConfig({ enabled: true, aiEndpoints: ['api.openai.com'], debounceMs: 0, auditHandler: customAuditLog });
+    guardedFetch = createFetchInterceptor(nativeFetchMock);
     
     const url = 'https://api.openai.com/v1/chat';
     
-    await fetch(url, { method: 'POST', body: 'audit_test' });
+    await guardedFetch(url, { method: 'POST', body: 'audit_test' });
     await new Promise(r => setTimeout(r, 20));
-    await fetch(url, { method: 'POST', body: 'audit_test' });
+    await guardedFetch(url, { method: 'POST', body: 'audit_test' });
 
     expect(customAuditLog).toHaveBeenCalledTimes(2);
 
@@ -310,6 +329,16 @@ describe('Quota Guard Fetch Interceptor', () => {
     expect(customAuditLog.mock.calls[1][0].type).toBe('cache_hit');
     expect(customAuditLog.mock.calls[1][0].url).toBe(url);
   });
+
+  it('degrades gracefully to native fetch when interceptor internals throw', async () => {
+    // Ensure fail-safe: if key generation explodes, request still goes through
+    setConfig({ enabled: true, aiEndpoints: ['api.openai.com'], debounceMs: 0, cacheKeyStrategy: (() => { throw new Error('BOOM'); }) as any });
+    guardedFetch = createFetchInterceptor(nativeFetchMock);
+
+    const url = 'https://api.openai.com/v1/chat';
+    const res = await guardedFetch(url, { method: 'POST', body: 'failsafe' });
+    
+    expect(res.status).toBe(200);
+    expect(nativeFetchMock).toHaveBeenCalledTimes(1);
+  });
 });
-
-

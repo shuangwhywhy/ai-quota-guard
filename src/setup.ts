@@ -6,5 +6,5 @@ export const injectQuotaGuard = (config?: Partial<QuotaGuardConfig>) => {
     setConfig(config);
   }
   hookFetch();
-  console.log('[Quota Guard] Fetch interceptor active.');
+  console.log('[Quota Guard] Active.');
 };

@@ -12,6 +12,10 @@ export class InFlightRegistry {
   delete(key: string): void {
     this.inFlight.delete(key);
   }
+
+  clear(): void {
+    this.inFlight.clear();
+  }
 }
 
 export const globalInFlightRegistry = new InFlightRegistry();

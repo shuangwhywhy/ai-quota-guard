@@ -11,8 +11,10 @@ export interface QuotaGuardConfig {
   breakerMaxFailures: number;
   /** Breaker cool-off period in MS. Default: 30000 (30s) */
   breakerResetTimeoutMs: number;
-  /** Time in ms to delay requests and cancel previous identical endpoint hits. 0 to disable. Default: 0 */
+  /** Time in ms to delay requests and merge identical in-flight requests. 0 to disable. Default: 300 */
   debounceMs: number;
+  /** Strategy for generating the cache/debounce key. 'intelligent' strips noise like temperature. Default: 'intelligent' */
+  cacheKeyStrategy?: 'intelligent' | 'exact' | ((url: string, method: string, body: any) => any);
   /** Custom audit logger */
   auditHandler?: (event: AuditEvent) => void;
   /** Optional external cache store adapter (e.g., Redis, FileSystem) */
@@ -44,7 +46,8 @@ export const getDefaultConfig = (): QuotaGuardConfig => {
     cacheTtlMs: 1000 * 60 * 60, // 1 hour for debug caching
     breakerMaxFailures: 3,
     breakerResetTimeoutMs: 30000,
-    debounceMs: 0,
+    debounceMs: 300,
+    cacheKeyStrategy: 'intelligent',
   };
 };
 

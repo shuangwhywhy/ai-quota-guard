@@ -75,4 +75,41 @@ describe('MemoryCache', () => {
     
     expect(await cache.get('key1', 5000)).toBeNull();
   });
+
+  it('sweeps expired entries automatically after SWEEP_THRESHOLD operations', async () => {
+    // Insert an entry with a known short ttlMs
+    const entry = {
+      responsePayloadBase64: 'gc-test',
+      headers: {},
+      status: 200,
+      timestamp: Date.now(),
+      ttlMs: 1000, // 1 second TTL
+    };
+    await cache.set('stale-key', entry);
+
+    // Advance time past the entry's ttlMs
+    vi.advanceTimersByTime(1500);
+
+    // The entry is stale but hasn't been swept yet (lazy get would catch it,
+    // but the GC sweep hasn't triggered). Let's verify it's gone after enough ops.
+    // Trigger 50 more set() operations to hit the SWEEP_THRESHOLD (50)
+    for (let i = 0; i < 50; i++) {
+      await cache.set(`filler-${i}`, {
+        responsePayloadBase64: 'filler',
+        headers: {},
+        status: 200,
+        timestamp: Date.now(),
+        ttlMs: 999999,
+      });
+    }
+
+    // After sweep, the stale entry should be gone
+    // Use a very large ttlMs in get() so the get() itself doesn't filter it out
+    const result = await cache.get('stale-key', 999999);
+    expect(result).toBeNull();
+
+    // But the fresh filler entries should still be present
+    const freshy = await cache.get('filler-0', 999999);
+    expect(freshy).not.toBeNull();
+  });
 });

@@ -11,7 +11,7 @@ export function quotaGuardPlugin() {
       // Very basic injection for the app entry point if in dev
       // A more robust approach would dynamically import the setup script at the top of main.js/ts
       // But for a simple plugin we can just virtual module it or use Vite's inject
-      if (process.env.NODE_ENV === 'development' && (id.endsWith('main.ts') || id.endsWith('main.js') || id.endsWith('index.ts') || id.endsWith('index.js'))) {
+      if (process.env.NODE_ENV === 'development' && /[\/\\](main|index)\.[tj]sx?$/.test(id)) {
         return {
           code: `import "quota-guard/register";\n${code}`,
           map: null
