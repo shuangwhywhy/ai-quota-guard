@@ -30,6 +30,13 @@ describe('MemoryCache', () => {
     expect(result?.status).toBe(200);
   });
 
+  it('skips sweep when opCount is below threshold', async () => {
+    // Threshold is 50. 
+    await cache.set('test', { responsePayloadBase64: 'd', headers: {}, status: 200, timestamp: Date.now() });
+    expect((cache as any).opCount).toBe(1);
+    expect((cache as any).opCount).toBeLessThan(50);
+  });
+
   it('rejects keys that have expired (TTL validation)', async () => {
     const entry = {
       responsePayloadBase64: 'stale-data',

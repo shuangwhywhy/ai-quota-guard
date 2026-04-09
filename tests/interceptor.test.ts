@@ -341,4 +341,170 @@ describe('Quota Guard Fetch Interceptor', () => {
     expect(res.status).toBe(200);
     expect(nativeFetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it('passes through when config.enabled is false', async () => {
+    setConfig({ enabled: false, aiEndpoints: ['api.openai.com'], debounceMs: 0 });
+    guardedFetch = createFetchInterceptor(nativeFetchMock);
+
+    const url = 'https://api.openai.com/v1/chat';
+    await guardedFetch(url, { method: 'POST', body: 'disabled' });
+    await guardedFetch(url, { method: 'POST', body: 'disabled' });
+
+    // Both calls come through directly without cache/dedup
+    expect(nativeFetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('Quota Guard Multi-Provider Interception', () => {
+  let nativeFetchMock: any;
+  let guardedFetch: typeof globalThis.fetch;
+
+  beforeEach(() => {
+    globalCache.clear();
+    globalInFlightRegistry.clear?.();
+    nativeFetchMock = vi.fn().mockImplementation(async () => {
+      await new Promise(r => setTimeout(r, 10));
+      return new Response(JSON.stringify({ provider: 'response' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+
+    setConfig({
+      enabled: true,
+      aiEndpoints: ['api.openai.com', 'api.anthropic.com', 'api.deepseek.com', 'generativelanguage.googleapis.com', 'api.cohere.ai', 'api.mistral.ai'],
+      cacheTtlMs: 5000,
+      breakerMaxFailures: 3,
+      debounceMs: 0,
+    });
+
+    guardedFetch = createFetchInterceptor(nativeFetchMock);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('intercepts and caches Anthropic requests', async () => {
+    const url = 'https://api.anthropic.com/v1/messages';
+    const body = JSON.stringify({ model: 'claude-3-opus', messages: [{ role: 'user', content: 'test' }] });
+
+    await guardedFetch(url, { method: 'POST', body });
+    expect(nativeFetchMock).toHaveBeenCalledTimes(1);
+
+    await new Promise(r => setTimeout(r, 20));
+
+    await guardedFetch(url, { method: 'POST', body });
+    expect(nativeFetchMock).toHaveBeenCalledTimes(1); // Cache hit!
+  });
+
+  it('intercepts and caches DeepSeek requests', async () => {
+    const url = 'https://api.deepseek.com/chat/completions';
+    const body = JSON.stringify({ model: 'deepseek-chat', messages: [{ role: 'user', content: 'hi' }] });
+
+    await guardedFetch(url, { method: 'POST', body });
+    await new Promise(r => setTimeout(r, 20));
+    await guardedFetch(url, { method: 'POST', body });
+
+    expect(nativeFetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('intercepts and caches Google Gemini requests', async () => {
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+    const body = JSON.stringify({ contents: [{ parts: [{ text: 'hello' }] }] });
+
+    await guardedFetch(url, { method: 'POST', body });
+    await new Promise(r => setTimeout(r, 20));
+    await guardedFetch(url, { method: 'POST', body });
+
+    expect(nativeFetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('intercepts and caches Cohere requests', async () => {
+    const url = 'https://api.cohere.ai/v1/chat';
+    const body = JSON.stringify({ message: 'hello from cohere', model: 'command-r-plus' });
+
+    await guardedFetch(url, { method: 'POST', body });
+    await new Promise(r => setTimeout(r, 20));
+    await guardedFetch(url, { method: 'POST', body });
+
+    expect(nativeFetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('intercepts and caches Mistral requests', async () => {
+    const url = 'https://api.mistral.ai/v1/chat/completions';
+    const body = JSON.stringify({ model: 'mistral-large-latest', messages: [{ role: 'user', content: 'test' }] });
+
+    await guardedFetch(url, { method: 'POST', body });
+    await new Promise(r => setTimeout(r, 20));
+    await guardedFetch(url, { method: 'POST', body });
+
+    expect(nativeFetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('intercepts custom user-defined endpoints', async () => {
+    setConfig({
+      enabled: true,
+      aiEndpoints: ['api.my-custom-llm.com'],
+      cacheTtlMs: 5000,
+      breakerMaxFailures: 3,
+      debounceMs: 0,
+    });
+    guardedFetch = createFetchInterceptor(nativeFetchMock);
+
+    const url = 'https://api.my-custom-llm.com/v1/generate';
+    const body = JSON.stringify({ prompt: 'custom test' });
+
+    await guardedFetch(url, { method: 'POST', body });
+    await new Promise(r => setTimeout(r, 20));
+    await guardedFetch(url, { method: 'POST', body });
+
+    expect(nativeFetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('deduplicates in-flight across different AI providers independently', async () => {
+    const openaiUrl = 'https://api.openai.com/v1/chat';
+    const anthropicUrl = 'https://api.anthropic.com/v1/messages';
+    const body = JSON.stringify({ model: 'test', messages: [] });
+
+    // Two different providers at the same time — both should go through
+    const [res1, res2] = await Promise.all([
+      guardedFetch(openaiUrl, { method: 'POST', body }),
+      guardedFetch(anthropicUrl, { method: 'POST', body }),
+    ]);
+
+    expect(nativeFetchMock).toHaveBeenCalledTimes(2);
+    expect(res1.status).toBe(200);
+    expect(res2.status).toBe(200);
+  });
+
+  it('handles malformed URL gracefully via fail-safe', async () => {
+    // isAIEndpoint catches URL parse errors
+    const res = await guardedFetch('not-a-valid-url', { method: 'POST', body: 'test' });
+    expect(res.status).toBe(200);
+    expect(nativeFetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('intelligently caches across providers when body semantics match', async () => {
+    setConfig({
+      enabled: true,
+      aiEndpoints: ['api.openai.com'],
+      cacheTtlMs: 5000,
+      breakerMaxFailures: 3,
+      debounceMs: 0,
+      cacheKeyStrategy: 'intelligent',
+    });
+    guardedFetch = createFetchInterceptor(nativeFetchMock);
+
+    const url = 'https://api.openai.com/v1/chat';
+    const body1 = JSON.stringify({ model: 'gpt-4', messages: [{ role: 'user', content: 'test' }], temperature: 0.5 });
+    const body2 = JSON.stringify({ model: 'gpt-4', messages: [{ role: 'user', content: 'test' }], temperature: 0.9, stream: true });
+
+    await guardedFetch(url, { method: 'POST', body: body1 });
+    await new Promise(r => setTimeout(r, 20));
+    await guardedFetch(url, { method: 'POST', body: body2 });
+
+    // Intelligent strategy ignores temperature and stream → cache hit!
+    expect(nativeFetchMock).toHaveBeenCalledTimes(1);
+  });
 });
