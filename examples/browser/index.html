@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quota Guard Browser Example</title>
+</head>
+<body>
+    <h1>Quota Guard Browser Test</h1>
+    <p>Check your browser console to see Quota Guard in action.</p>
+    <button id="test-btn">Fire 3 Rapid Concurrent API Calls (Debounce Test)</button>
+    <div id="output"></div>
+
+    <!-- Simulate the Quota Guard Vite Plugin injecting the script in dev mode -->
+    <script type="module">
+        // In a real Vite app, the vite plugin injects this automatically.
+        import { injectQuotaGuard } from '../../src/setup.ts';
+        injectQuotaGuard({
+            enabled: true,
+            auditHandler: (event) => {
+                const p = document.createElement('p');
+                p.textContent = `[AUDIT] ${event.type} -> ${event.url}`;
+                document.getElementById('output').appendChild(p);
+                console.log(event);
+            }
+        });
+
+        // Simulating the business code which knows NOTHING about Quota Guard
+        document.getElementById('test-btn').addEventListener('click', async () => {
+            const url = 'https://api.openai.com/v1/chat/completions';
+            const init = {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer FAKE' },
+                body: JSON.stringify({ model: 'gpt-4', messages: [{role: 'user', content: 'test test test'}] })
+            };
+
+            // In-flight debounce exactly intercepts these! 
+            // Only 1 real network request will occur, the other 2 will share the promise.
+            console.log('Firing 3 fetch requests simultaneously...');
+            Promise.all([
+                fetch(url, init).catch(e => console.error(e)),
+                fetch(url, init).catch(e => console.error(e)),
+                fetch(url, init).catch(e => console.error(e))
+            ]);
+        });
+    </script>
+</body>
+</html>

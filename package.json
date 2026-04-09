@@ -1,0 +1,40 @@
+{
+  "name": "quota-guard",
+  "version": "1.0.0",
+  "description": "Zero-intrusion AI Call Guard and debug cost-saving kernel for model invocations",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./register": "./dist/register.js",
+    "./vite": {
+      "require": "./dist/vite.js",
+      "import": "./dist/vite.mjs",
+      "types": "./dist/vite.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "ai",
+    "quota",
+    "guard",
+    "interceptor",
+    "LLM"
+  ],
+  "author": "qyz",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0"
+  }
+}
