@@ -81,6 +81,8 @@ const buildResponse = (buffer: ArrayBuffer, init: ResponseInit): Response => {
   return new Response(newBuffer, init);
 };
 
+const debounceRegistry = new Map<string, { timeoutId: any, rejecter: (reason: any) => void }>();
+
 export const createFetchInterceptor = (nativeFetch: FetchFn): FetchFn => {
   return async function interceptor(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
     const config = getConfig();
@@ -95,6 +97,30 @@ export const createFetchInterceptor = (nativeFetch: FetchFn): FetchFn => {
 
     if (!key) {
       return nativeFetch(input, init);
+    }
+
+    // 0. Debounce Intercept
+    if (config.debounceMs > 0) {
+      const debounceKey = `${method}:${requestUrl}`;
+      const existing = debounceRegistry.get(debounceKey);
+      if (existing) {
+        clearTimeout(existing.timeoutId);
+        // Emulate a standard AbortError DOMException
+        const abortErr = typeof DOMException !== 'undefined' 
+          ? new DOMException('Request debounced by Quota Guard', 'AbortError')
+          : new Error('Request debounced by Quota Guard');
+        Object.defineProperty(abortErr, 'name', { value: 'AbortError' });
+        existing.rejecter(abortErr);
+        emitAudit(config, { type: 'debounced', key: debounceKey, url: requestUrl, timestamp: Date.now() });
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          debounceRegistry.delete(debounceKey);
+          resolve();
+        }, config.debounceMs);
+        debounceRegistry.set(debounceKey, { timeoutId, rejecter: reject });
+      });
     }
 
     // 1. Circuit Breaker Check

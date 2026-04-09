@@ -270,6 +270,46 @@ describe('Quota Guard Fetch Interceptor', () => {
     const text = await res.text();
     expect(text).toBe('fallback');
   });
+  it('debounces rapid AI requests, cancelling previous ones via AbortError', async () => {
+    setConfig({ enabled: true, aiEndpoints: ['api.openai.com'], debounceMs: 50, cacheTtlMs: 5000, breakerMaxFailures: 2 });
+    const url = 'https://api.openai.com/v1/chat';
+
+    const p1 = fetch(url, { method: 'POST', body: 'first click' });
+    const p2 = fetch(url, { method: 'POST', body: 'second click' });
+    const p3 = fetch(url, { method: 'POST', body: 'third click' });
+
+    await expect(p1).rejects.toThrow('debounced');
+    await expect(p2).rejects.toThrow('debounced');
+    
+    // The third one should succeed after 50ms!
+    const res = await p3;
+    expect(res.status).toBe(200);
+
+    expect(nativeFetchMock).toHaveBeenCalledTimes(1);
+    
+    const capture = nativeFetchMock.mock.calls[0];
+    let interceptedBody = capture[1].body;
+    expect(interceptedBody).toBe('third click');
+  });
+
+  it('securely pipes all state transitions into the configured custom auditHandler', async () => {
+    const customAuditLog = vi.fn();
+    setConfig({ enabled: true, aiEndpoints: ['api.openai.com'], debounceMs: 0, auditHandler: customAuditLog });
+    
+    const url = 'https://api.openai.com/v1/chat';
+    
+    await fetch(url, { method: 'POST', body: 'audit_test' });
+    await new Promise(r => setTimeout(r, 20));
+    await fetch(url, { method: 'POST', body: 'audit_test' });
+
+    expect(customAuditLog).toHaveBeenCalledTimes(2);
+
+    expect(customAuditLog.mock.calls[0][0].type).toBe('live_called');
+    expect(customAuditLog.mock.calls[0][0].url).toBe(url);
+
+    expect(customAuditLog.mock.calls[1][0].type).toBe('cache_hit');
+    expect(customAuditLog.mock.calls[1][0].url).toBe(url);
+  });
 });
 
 
