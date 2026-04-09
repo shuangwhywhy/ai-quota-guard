@@ -31,6 +31,11 @@ const isAIEndpoint = (urlStr: string, endpoints: string[]): boolean => {
   }
 };
 
+// Track requests currently being processed to avoid deadlocks in multi-interceptor environments (like Node.js with MSW + XHR polyfills)
+const activeRequests = new WeakSet<Request>();
+// Tick-based lock to prevent the same logical request from being intercepted multiple times across different layers (XHR -> http)
+const seenKeysThisTick = new Set<string>();
+
 function bufferToBase64(buffer: ArrayBuffer): string {
   if (typeof Buffer !== 'undefined') {
     return Buffer.from(buffer).toString('base64');
@@ -85,6 +90,9 @@ const buildResponse = (buffer: ArrayBuffer, init: ResponseInit): Response => {
   const newBuffer = buffer.slice(0);
   return new Response(newBuffer, init);
 };
+
+// Legacy XHR fallback for browser environments
+let originalXHR: any = null;
 
 /**
  * Core pipeline handler: applies debounce → circuit breaker → cache → dedup → live fetch.
@@ -251,25 +259,19 @@ export const hookFetch = () => {
       const { BatchInterceptor } = require('@mswjs/interceptors');
       const { ClientRequestInterceptor } = require('@mswjs/interceptors/ClientRequest');
       const { FetchInterceptor } = require('@mswjs/interceptors/fetch');
+      const { XMLHttpRequestInterceptor } = require('@mswjs/interceptors/XMLHttpRequest');
 
       batchInterceptor = new BatchInterceptor({
         name: 'quota-guard',
         interceptors: [
           new ClientRequestInterceptor(),
           new FetchInterceptor(),
+          new XMLHttpRequestInterceptor(),
         ],
       });
 
       batchInterceptor.on('request', async ({ request, controller }: { request: Request, controller: any }) => {
         try {
-          // Clone the request body before it's consumed
-          const clonedRequest = request.clone();
-          let bodyText: string | null = null;
-          try {
-            const text = await clonedRequest.text();
-            if (text) bodyText = text;
-          } catch { /* ignore */ }
-
           const config = getConfig();
           const requestUrl = request.url;
           const method = request.method;
@@ -278,8 +280,27 @@ export const hookFetch = () => {
             return; // Let the request pass through natively
           }
 
+          // Deadlock prevention: If we are already handling this logical request (e.g. XHR wrapping http), pass through
+          if (activeRequests.has(request)) return;
+          activeRequests.add(request);
+
+          // Clone the request body before it's consumed
+          const clonedRequest = request.clone();
+          let bodyText: string | null = null;
+          try {
+            const text = await clonedRequest.text();
+            if (text) bodyText = text;
+          } catch { /* ignore */ }
+
           const key = await generateStableKey(requestUrl, method, bodyText, config.cacheKeyStrategy);
           if (!key) return;
+
+          // Deadlock prevention for multi-layered interceptors (XHR -> http)
+          if (seenKeysThisTick.has(key)) {
+            return; // Already handling this logical request in this tick
+          }
+          seenKeysThisTick.add(key);
+          setTimeout(() => seenKeysThisTick.delete(key), 0);
 
           // 0. Debounce
           if (config.debounceMs > 0) {
@@ -388,15 +409,80 @@ export const hookFetch = () => {
     }
   }
 
-  // Browser / fallback: legacy Proxy-based fetch hook
-  if (typeof globalThis !== 'undefined' && globalThis.fetch) {
-    originalFetch = globalThis.fetch;
-    const interceptor = createFetchInterceptor(originalFetch);
-    globalThis.fetch = new Proxy(originalFetch, {
-      apply: function (target, thisArg, argumentsList) {
-        return interceptor.apply(thisArg, argumentsList as any);
-      }
-    });
+  // Browser / fallback: legacy Proxy-based fetch hook + XHR hook
+  if (typeof globalThis !== 'undefined') {
+    if (globalThis.fetch) {
+      originalFetch = globalThis.fetch;
+      const interceptor = createFetchInterceptor(originalFetch);
+      globalThis.fetch = new Proxy(originalFetch, {
+        apply: function (target, thisArg, argumentsList) {
+          return interceptor.apply(thisArg, argumentsList as any);
+        }
+      });
+    }
+
+    if (globalThis.XMLHttpRequest) {
+      originalXHR = globalThis.XMLHttpRequest;
+      
+      // Robust XHR interceptor that redirects to handleRequest
+      const QuotaGuardXHR = function() {
+        const xhr = new originalXHR();
+        const originalOpen = xhr.open;
+        const originalSend = xhr.send;
+        let requestUrl = '';
+        let method = 'GET';
+
+        xhr.open = function(m: string, url: string) {
+          method = m;
+          requestUrl = url;
+          return originalOpen.apply(xhr, arguments);
+        };
+
+        const originalSetHeader = xhr.setRequestHeader;
+        const requestHeaders: Record<string, string> = {};
+        xhr.setRequestHeader = function(header: string, value: string) {
+          requestHeaders[header] = value;
+          return originalSetHeader.apply(xhr, arguments);
+        };
+
+        xhr.send = async function(body: any) {
+          const config = getConfig();
+          if (config.enabled && isAIEndpoint(requestUrl, config.aiEndpoints) && method !== 'OPTIONS') {
+            try {
+              // Convert XHR call to a Fetch request and pipe through handleRequest
+              const response = await handleRequest(originalFetch || globalThis.fetch, requestUrl, {
+                method,
+                body: body,
+                headers: requestHeaders
+              });
+
+              // Apply the response back to the XHR object
+              Object.defineProperty(xhr, 'status', { value: response.status });
+              Object.defineProperty(xhr, 'statusText', { value: response.statusText });
+              Object.defineProperty(xhr, 'responseText', { value: await response.text() });
+              Object.defineProperty(xhr, 'readyState', { value: 4 });
+              
+              const headers: Record<string, string> = {};
+              response.headers.forEach((v, k) => { headers[k] = v; });
+              Object.defineProperty(xhr, 'getAllResponseHeaders', { value: () => {
+                return Object.entries(headers).map(([k, v]) => `${k}: ${v}`).join('\r\n');
+              }});
+
+              if (xhr.onreadystatechange) xhr.onreadystatechange(new Event('readystatechange'));
+              if (xhr.onload) xhr.onload(new Event('load'));
+              return;
+            } catch (e) {
+              // Fallback to native send on error
+            }
+          }
+          return originalSend.apply(xhr, arguments);
+        };
+
+        return xhr;
+      };
+
+      (globalThis as any).XMLHttpRequest = QuotaGuardXHR;
+    }
   }
 };
 
@@ -406,8 +492,14 @@ export const unhookFetch = () => {
     batchInterceptor = null;
     return;
   }
-  if (originalFetch && typeof globalThis !== 'undefined') {
-    globalThis.fetch = originalFetch;
-    originalFetch = null;
+  if (typeof globalThis !== 'undefined') {
+    if (originalFetch) {
+      globalThis.fetch = originalFetch;
+      originalFetch = null;
+    }
+    if (originalXHR) {
+      globalThis.XMLHttpRequest = originalXHR;
+      originalXHR = null;
+    }
   }
 };
