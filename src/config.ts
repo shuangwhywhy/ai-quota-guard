@@ -1,3 +1,5 @@
+import type { ICacheAdapter } from './cache/memory';
+
 export interface QuotaGuardConfig {
   /** If false, Quota Guard transparently passes everything through. Default: true in dev, false in prod */
   enabled: boolean;
@@ -11,6 +13,8 @@ export interface QuotaGuardConfig {
   breakerResetTimeoutMs: number;
   /** Custom audit logger */
   auditHandler?: (event: AuditEvent) => void;
+  /** Optional external cache store adapter (e.g., Redis, FileSystem) */
+  cacheAdapter?: ICacheAdapter;
 }
 
 export interface AuditEvent {

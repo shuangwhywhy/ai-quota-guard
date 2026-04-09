@@ -1,18 +1,24 @@
-export interface CacheEntry {
-  responsePayload: any; // Raw arraybuffer or JSON depending on interception
+export interface SerializedCacheEntry {
+  responsePayloadBase64: string;
   headers: Record<string, string>;
   status: number;
   timestamp: number;
 }
 
-export class MemoryCache {
-  private store: Map<string, CacheEntry> = new Map();
+export interface ICacheAdapter {
+  get(key: string, ttlMs: number): SerializedCacheEntry | null | Promise<SerializedCacheEntry | null>;
+  set(key: string, data: SerializedCacheEntry): void | Promise<void>;
+  clear?(): void | Promise<void>;
+}
 
-  set(key: string, data: CacheEntry): void {
+export class MemoryCache implements ICacheAdapter {
+  private store: Map<string, SerializedCacheEntry> = new Map();
+
+  set(key: string, data: SerializedCacheEntry): void {
     this.store.set(key, data);
   }
 
-  get(key: string, ttlMs: number): CacheEntry | null {
+  get(key: string, ttlMs: number): SerializedCacheEntry | null {
     const entry = this.store.get(key);
     if (!entry) return null;
 
