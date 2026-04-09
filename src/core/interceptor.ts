@@ -86,24 +86,33 @@ export const createFetchInterceptor = (nativeFetch: FetchFn): FetchFn => {
     emitAudit(config, { type: 'live_called', key, url: requestUrl, timestamp: Date.now() });
 
     // 4. Execute Native Call
-    const execLive = async () => {
-      try {
-        const response = await nativeFetch(input, init);
-        
-        // Read into memory for cache and sharing
-        const buffer = await response.arrayBuffer();
-        
-        // Extract plain headers
-        const headers: Record<string, string> = {};
-        response.headers.forEach((val, k) => { headers[k] = val; });
+    let resolver: (value: any) => void;
+    let rejecter: (reason?: any) => void;
+    // Store a Promise that predictably resolves to ArrayBuffer/cacheData
+    const cacheDataPromise = new Promise<any>((res, rej) => {
+      resolver = res;
+      rejecter = rej;
+    });
 
+    // Mute unhandled rejections if no deduplicated request awaits the shared promise
+    cacheDataPromise.catch(() => {});
+
+    globalInFlightRegistry.set(key, cacheDataPromise);
+
+    try {
+      const response = await nativeFetch(input, init);
+      
+      const headers: Record<string, string> = {};
+      response.headers.forEach((val, k) => { headers[k] = val; });
+      const status = response.status;
+      
+      const cacheResponseData = (buffer: ArrayBuffer) => {
         const cacheData = {
           responsePayload: buffer,
           headers,
-          status: response.status,
+          status,
           timestamp: Date.now()
         };
-
         if (response.ok) {
           globalBreaker.recordSuccess(key);
           globalCache.set(key, cacheData);
@@ -111,22 +120,43 @@ export const createFetchInterceptor = (nativeFetch: FetchFn): FetchFn => {
           globalBreaker.recordFailure(key);
           emitAudit(config, { type: 'request_failed', key, url: requestUrl, timestamp: Date.now(), details: { status: response.status } });
         }
-
         return cacheData;
-      } catch (err: any) {
-        globalBreaker.recordFailure(key);
-        emitAudit(config, { type: 'request_failed', key, url: requestUrl, timestamp: Date.now(), details: { error: err.message } });
-        throw err;
-      } finally {
+      };
+
+      if (response.body) {
+        const [stream1, stream2] = response.body.tee();
+        const liveResponse = new Response(stream1, { status, statusText: response.statusText, headers: response.headers });
+        
+        // Background cache
+        (async () => {
+          try {
+            const buffer = await new Response(stream2).arrayBuffer();
+            const data = cacheResponseData(buffer);
+            resolver!(data);
+          } catch (err: any) {
+            globalBreaker.recordFailure(key);
+            emitAudit(config, { type: 'request_failed', key, url: requestUrl, timestamp: Date.now(), details: { error: err.message } });
+            rejecter!(err);
+          } finally {
+            globalInFlightRegistry.delete(key);
+          }
+        })();
+        
+        return liveResponse;
+      } else {
+        const buffer = await response.arrayBuffer();
+        const data = cacheResponseData(buffer);
+        resolver!(data);
         globalInFlightRegistry.delete(key);
+        return buildResponse(data.responsePayload, { status, headers });
       }
-    };
-
-    const promise = execLive();
-    globalInFlightRegistry.set(key, promise);
-
-    const resultData = await promise;
-    return buildResponse(resultData.responsePayload, { status: resultData.status, headers: resultData.headers });
+    } catch (err: any) {
+      globalBreaker.recordFailure(key);
+      emitAudit(config, { type: 'request_failed', key, url: requestUrl, timestamp: Date.now(), details: { error: err.message } });
+      globalInFlightRegistry.delete(key);
+      rejecter!(err);
+      throw err;
+    }
   };
 };
 

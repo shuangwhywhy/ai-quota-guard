@@ -7,15 +7,20 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.js"
     },
     "./register": "./dist/register.js",
     "./vite": {
-      "require": "./dist/vite.js",
+      "types": "./dist/vite.d.ts",
       "import": "./dist/vite.mjs",
-      "types": "./dist/vite.d.ts"
+      "require": "./dist/vite.js"
+    },
+    "./axios": {
+      "types": "./dist/axios.d.ts",
+      "import": "./dist/axios.mjs",
+      "require": "./dist/axios.js"
     }
   },
   "scripts": {

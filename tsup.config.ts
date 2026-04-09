@@ -4,7 +4,8 @@ export default defineConfig({
   entry: {
     index: 'src/index.ts',
     register: 'src/register.ts',
-    vite: 'src/vite.ts'
+    vite: 'src/vite.ts',
+    axios: 'src/axios.ts'
   },
   format: ['cjs', 'esm'],
   dts: true,

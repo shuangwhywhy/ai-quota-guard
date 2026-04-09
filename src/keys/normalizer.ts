@@ -7,6 +7,25 @@ function djb2Hash(str: string): string {
   return Math.abs(hash).toString(16);
 }
 
+function isPlainObject(value: any): boolean {
+  return typeof value === 'object' && value !== null && !Array.isArray(value) && !(value instanceof Date) && !(value instanceof RegExp);
+}
+
+export function deepSortKeys(obj: any): any {
+  if (Array.isArray(obj)) {
+    return obj.map(deepSortKeys);
+  }
+  if (isPlainObject(obj)) {
+    return Object.keys(obj)
+      .sort()
+      .reduce((acc, key) => {
+        acc[key] = deepSortKeys(obj[key]);
+        return acc;
+      }, {} as any);
+  }
+  return obj;
+}
+
 export const generateStableKey = (url: string | URL, method: string, body?: any): string | null => {
   const urlStr = url.toString();
   
@@ -25,10 +44,8 @@ export const generateStableKey = (url: string | URL, method: string, body?: any)
       parsedBody = body;
     }
 
-    if (typeof parsedBody === 'object' && parsedBody !== null) {
-      // Remove any inherently volatile fields that providers inject if we know them
-      // For general purposes, we just serialize it deterministically (assume stable key order for simple bodies, or sort keys)
-      normalizedBody = JSON.stringify(parsedBody, Object.keys(parsedBody).sort());
+    if (isPlainObject(parsedBody) || Array.isArray(parsedBody)) {
+      normalizedBody = JSON.stringify(deepSortKeys(parsedBody));
     } else {
       normalizedBody = String(parsedBody);
     }

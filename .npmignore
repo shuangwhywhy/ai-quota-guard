@@ -1,0 +1,38 @@
+# Source files
+src/
+tests/
+examples/
+agents/
+
+# Build and configuration files
+tsconfig.json
+tsup.config.ts
+vitest.config.ts
+vitest.config.js
+.eslintrc*
+.prettierrc*
+eslint.config.js
+jest.config.js
+
+# Project management files
+.gitignore
+.github/
+.vscode/
+.idea/
+
+# Testing and coverage
+coverage/
+.nyc_output/
+
+# Logs and runtime data
+logs/
+*.log
+pids/
+*.pid
+
+# Environment variables
+.env*
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
