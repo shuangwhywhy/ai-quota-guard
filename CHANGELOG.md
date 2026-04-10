@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.1](https://github.com/shuangwhywhy/ai-quota-guard/compare/v1.7.0...v1.7.1) (2026-04-10)
+
+### Bug Fixes
+
+* update NPM and GitHub Packages authentication methods in publish workflow ([a98def4](https://github.com/shuangwhywhy/ai-quota-guard/commit/a98def4e95b617d97d28134b60e2abeb645219c1))
+* update npm publish command to use explicit registry authentication via config set ([8897217](https://github.com/shuangwhywhy/ai-quota-guard/commit/8897217497bbf85c258a1c4d6fc91347e90361fe))
+
 ## [1.7.0](https://github.com/shuangwhywhy/ai-quota-guard/compare/v1.6.0...v1.7.0) (2026-04-10)
 
 ### Features
