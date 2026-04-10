@@ -52,8 +52,8 @@ export function QuotaGuardPlugin(options: Partial<QuotaGuardConfig> = {}): ViteP
         // This virtual module triggers the global hook and applies user configuration.
         // It relies on the 'quota-guard' package being installed.
         return [
-          `import { setConfig } from "quota-guard";`,
-          `import "quota-guard/register";`,
+          `import { setConfig } from "@shuangwhywhy/quota-guard";`,
+          `import "@shuangwhywhy/quota-guard/register";`,
           `setConfig(${JSON.stringify(options)});`
         ].join('\n');
       }

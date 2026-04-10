@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quota Guard Browser Tests</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mocha/10.2.0/mocha.min.css" />
+    <style>
+        #mocha { margin-top: 50px; }
+    </style>
+</head>
+<body>
+    <div id="mocha"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mocha/10.2.0/mocha.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chai/4.3.7/chai.min.js"></script>
+    <script>
+        mocha.setup('bdd');
+        window.expect = chai.expect;
+    </script>
+    <!-- Use type="module" to import TS via Vite -->
+    <script type="module" src="./browser_integration.test.ts"></script>
+    <script>
+        window.onload = () => {
+             mocha.run().on('end', () => {
+                 window.TEST_FINISHED = true;
+                 window.TEST_RESULTS = document.getElementById('mocha-stats').textContent;
+                 // Set a flag for the subagent to read
+                 const failures = document.querySelector('.failures em').textContent;
+                 window.TEST_FAILURES = parseInt(failures);
+             });
+        };
+    </script>
+</body>
+</html>

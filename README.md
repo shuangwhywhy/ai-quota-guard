@@ -90,7 +90,7 @@ injectQuotaGuard({
   inFlightTimeoutMs: 60000,      // Max wait for shared requests (default: 60s)
   breakerMaxFailures: 3,
   globalBreakerMaxFailures: 10,   // Process-wide safety net
-  intelligentFields: ['model', 'messages', 'prompt', 'system'], // Customize intelligent hashing
+  intelligentFields: ['model', 'messages', 'prompt', 'system', 'contents', 'message'], 
   aiEndpoints: [/api\.my-custom-llm\.com/, 'other-provider.com'], // Supports String or RegExp
   auditHandler: (event) => console.log('Quota Guard Event:', event.type, event.key)
 });

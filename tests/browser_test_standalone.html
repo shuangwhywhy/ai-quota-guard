@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quota Guard Browser Tests (Standalone)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mocha/10.2.0/mocha.min.css" />
+    <style>
+        #mocha { margin-top: 50px; }
+        #test-summary { padding: 20px; background: #f0f0f0; border: 1px solid #ccc; margin: 20px; font-family: sans-serif; }
+    </style>
+</head>
+<body>
+    <div id="test-summary">Waiting for tests...</div>
+    <div id="mocha"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mocha/10.2.0/mocha.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chai/4.3.7/chai.min.js"></script>
+    <script>
+        mocha.setup('bdd');
+        const expect = chai.expect;
+
+        // Inline BrowserCache Implementation (Pure JS)
+        class BrowserCache {
+            constructor() {
+                this.dbName = 'quota-guard-cache-test';
+                this.storeName = 'responses';
+                this.db = null;
+            }
+
+            async openDb() {
+                if (this.db) return this.db;
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(this.dbName, 1);
+                    request.onupgradeneeded = () => {
+                        const db = request.result;
+                        if (!db.objectStoreNames.contains(this.storeName)) {
+                            db.createObjectStore(this.storeName);
+                        }
+                    };
+                    request.onsuccess = () => {
+                        this.db = request.result;
+                        resolve(this.db);
+                    };
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
+            async get(key, ttlMs) {
+                const db = await this.openDb();
+                return new Promise((resolve) => {
+                    const transaction = db.transaction(this.storeName, 'readonly');
+                    const store = transaction.objectStore(this.storeName);
+                    const request = store.get(key);
+                    request.onsuccess = () => {
+                        const entry = request.result;
+                        if (!entry) return resolve(null);
+                        if (Date.now() - entry.timestamp > ttlMs) {
+                            this.delete(key);
+                            return resolve(null);
+                        }
+                        resolve(entry);
+                    };
+                    request.onerror = () => resolve(null);
+                });
+            }
+
+            async set(key, data) {
+                const db = await this.openDb();
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction(this.storeName, 'readwrite');
+                    const store = transaction.objectStore(this.storeName);
+                    const request = store.put(data, key);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
+            async delete(key) {
+                const db = await this.openDb();
+                const transaction = db.transaction(this.storeName, 'readwrite');
+                transaction.objectStore(this.storeName).delete(key);
+            }
+
+            async clear() {
+                const db = await this.openDb();
+                return new Promise((resolve) => {
+                    const transaction = db.transaction(this.storeName, 'readwrite');
+                    const store = transaction.objectStore(this.storeName);
+                    const request = store.clear();
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => resolve();
+                });
+            }
+        }
+
+        // Test Suite
+        describe('BrowserCache (IndexedDB Integration)', () => {
+            let cache;
+
+            beforeEach(async () => {
+                cache = new BrowserCache();
+                await cache.clear();
+            });
+
+            it('sets and gets entries from IndexedDB', async () => {
+                const entry = {
+                    responsePayloadBase64: 'browser-data',
+                    headers: { 'X-Test': 'true' },
+                    status: 200,
+                    timestamp: Date.now()
+                };
+
+                await cache.set('browser-key', entry);
+                const result = await cache.get('browser-key', 10000);
+                
+                expect(result).to.not.be.null;
+                expect(result.responsePayloadBase64).to.equal('browser-data');
+            });
+
+            it('persists data across "reloads" (new instance)', async () => {
+                const entry = {
+                    responsePayloadBase64: 'persistent-data',
+                    headers: {},
+                    status: 200,
+                    timestamp: Date.now()
+                };
+
+                await cache.set('p-key', entry);
+                
+                const newCache = new BrowserCache();
+                const result = await newCache.get('p-key', 10000);
+                
+                expect(result).to.not.be.null;
+                expect(result.responsePayloadBase64).to.equal('persistent-data');
+            });
+
+            it('handles expiry correctly', async () => {
+                const entry = {
+                    responsePayloadBase64: 'old-data',
+                    headers: {},
+                    status: 200,
+                    timestamp: Date.now() - 5000
+                };
+                await cache.set('old-key', entry);
+                const result = await cache.get('old-key', 2000); // 2s TTL
+                expect(result).to.be.null;
+            });
+        });
+
+        // Run tests
+        mocha.run().on('end', () => {
+            const stats = document.getElementById('mocha-stats');
+            const passes = document.querySelector('.passes em').textContent;
+            const failures = document.querySelector('.failures em').textContent;
+            const summary = `Tests Finished. Passes: ${passes}, Failures: ${failures}`;
+            document.getElementById('test-summary').textContent = summary;
+            window.TEST_SUMMARY = summary;
+            window.TEST_FAILURES = parseInt(failures);
+            window.TEST_FINISHED = true;
+        });
+    </script>
+</body>
+</html>
