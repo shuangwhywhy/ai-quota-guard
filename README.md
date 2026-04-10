@@ -24,7 +24,7 @@ Run your app with Quota Guard injected natively using standard Node flags. No co
 
 ```bash
 # Debug Mode (Auto-intercept, auto-cache, auto-dedup)
-NODE_ENV=development node --require quota-guard/register app.js
+NODE_ENV=development node --require @shuangwhywhy/quota-guard/register app.js
 
 # Production Mode (Bypass everything)
 NODE_ENV=production node app.js
@@ -36,14 +36,14 @@ If your project uses ES Modules (`"type": "module"` in `package.json`), use `--i
 
 ```bash
 # ESM Debug Mode
-NODE_ENV=development node --import quota-guard/register app.js
+NODE_ENV=development node --import @shuangwhywhy/quota-guard/register app.js
 ```
 
 In your `package.json`:
 ```json
 {
   "scripts": {
-    "dev": "NODE_ENV=development node --import quota-guard/register src/server.js",
+    "dev": "NODE_ENV=development node --import @shuangwhywhy/quota-guard/register src/server.js",
     "start": "NODE_ENV=production node src/server.js"
   }
 }
@@ -56,7 +56,7 @@ If you are using React / Vue / Vite, simply add the plugin. It ONLY injects duri
 ```typescript
 // vite.config.ts
 import { defineConfig } from 'vite';
-import { quotaGuardPlugin } from 'quota-guard/vite';
+import { quotaGuardPlugin } from '@shuangwhywhy/quota-guard/vite';
 
 export default defineConfig({
   plugins: [
@@ -71,7 +71,7 @@ For Axios users, especially in projects where you want a safe, non-intrusive int
 
 ```typescript
 import axios from 'axios';
-import { hookAxios } from 'quota-guard/axios';
+import { hookAxios } from '@shuangwhywhy/quota-guard/axios';
 
 const myAxios = axios.create();
 hookAxios(myAxios); // Now this instance is guarded!
