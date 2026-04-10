@@ -59,14 +59,25 @@ export class GuardPipeline {
 
         if (!key) return {};
 
+        this.emitAudit({ type: 'request_started', key, url: requestUrl, timestamp: Date.now() });
+
         const currentSnapshot: RequestMetadata = { url: requestUrl, method, headers: headersMap };
 
         // 4. Debounce
         if (effectiveConfig.debounceMs > 0) {
           await globalDebouncer.debounce(key, effectiveConfig.debounceMs);
+          this.emitAudit({ type: 'debounced', key, url: requestUrl, timestamp: Date.now() });
         }
 
         // 5. Circuit Breaker (Safety Guard - Mandatory)
+        
+        // 5a. Global Breaker
+        if (globalBreaker.isGlobalOpen(effectiveConfig.globalBreakerMaxFailures, effectiveConfig.breakerResetTimeoutMs)) {
+          this.emitAudit({ type: 'global_breaker_opened', key, url: requestUrl, timestamp: Date.now() });
+          return { error: new CircuitBreakerError(`Quota Guard: GLOBAL circuit breaker OPEN. Process-wide safety triggered.`), key };
+        }
+
+        // 5b. Per-Key Breaker
         if (globalBreaker.isOpen(key, effectiveConfig.breakerMaxFailures, effectiveConfig.breakerResetTimeoutMs)) {
           this.emitAudit({ type: 'breaker_opened', key, url: requestUrl, timestamp: Date.now() });
           return { error: new CircuitBreakerError(`Quota Guard: Circuit breaker OPEN for key ${key}.`), key };
@@ -74,10 +85,12 @@ export class GuardPipeline {
 
         // 6. Cache Check (Optimization Guard - Bypassable)
         const hasBypassHeader = effectiveConfig.bypassCacheHeaders?.some(h => headersMap[h] !== undefined);
+        const hasExplicitBypass = headersMap['x-quota-guard-bypass'] !== undefined;
+        
         const activeCache = effectiveConfig.cacheAdapter || globalCache;
         const cached = await activeCache.get(key, effectiveConfig.cacheTtlMs);
 
-        if (cached) {
+        if (cached && !hasExplicitBypass) {
           if (hasBypassHeader) {
             this.logIntentConflict('BYPASS_IGNORED', requestUrl, key, 'cache-control: no-cache (or equivalent)', 'Served from cache (Safety Policy)');
             const buffer = this.base64ToBuffer(cached.responsePayloadBase64);

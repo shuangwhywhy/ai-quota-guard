@@ -323,13 +323,14 @@ describe('Quota Guard Fetch Interceptor', () => {
     await new Promise(r => setTimeout(r, 20));
     await guardedFetch(url, { method: 'POST', body: 'audit_test' });
 
-    expect(customAuditLog).toHaveBeenCalledTimes(2);
+    // Now expects 4 calls because of the new 'request_started' event for each request
+    expect(customAuditLog).toHaveBeenCalledTimes(4);
 
-    expect(customAuditLog.mock.calls[0][0].type).toBe('live_called');
-    expect(customAuditLog.mock.calls[0][0].url).toBe(url);
-
-    expect(customAuditLog.mock.calls[1][0].type).toBe('cache_hit');
-    expect(customAuditLog.mock.calls[1][0].url).toBe(url);
+    expect(customAuditLog.mock.calls[0][0].type).toBe('request_started');
+    expect(customAuditLog.mock.calls[1][0].type).toBe('live_called');
+    
+    expect(customAuditLog.mock.calls[2][0].type).toBe('request_started');
+    expect(customAuditLog.mock.calls[3][0].type).toBe('cache_hit');
   });
 
   it('degrades gracefully to native fetch when interceptor internals throw', async () => {

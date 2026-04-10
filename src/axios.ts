@@ -46,7 +46,10 @@ export const hookAxios = (axiosInstance: unknown) => {
     const baseURLStr = (config.baseURL as string) || '';
     const fullPath = urlStr.startsWith('http') ? urlStr : baseURLStr + urlStr;
     
-    const isAI = guardConfig.aiEndpoints.some((ep: string) => fullPath.includes(ep));
+    const isAI = guardConfig.aiEndpoints.some((ep) => {
+      if (ep instanceof RegExp) return ep.test(fullPath);
+      return fullPath.includes(String(ep));
+    });
     
     if (isAI) {
       // Force Axios to utilize the `fetch` adapter.

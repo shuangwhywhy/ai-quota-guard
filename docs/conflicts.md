@@ -37,8 +37,9 @@ You sent a bypass signal like `cache-control: no-cache`, but Quota Guard interce
 Quota Guard treats **Budget Safety** as a higher priority than "freshness" by default. This prevents a accidental loop or a "Hard Refresh" from triggering 100 parallel AI calls.
 
 **How to solve?**
-1. Use the explicit bypass header: `X-Quota-Guard-Bypass: true`.
-2. Configure a **Rule** to allow passthrough for specific endpoints (see below).
+1. Use the explicit bypass header: `X-Quota-Guard-Bypass: true`. (Natively supported by default)
+2. Send standard `Cache-Control: no-cache` or `Pragma: no-cache`.
+3. Configure a **Rule** to allow passthrough for specific endpoints (see below).
 
 ---
 

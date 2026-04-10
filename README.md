@@ -88,8 +88,8 @@ injectQuotaGuard({
   cacheTtlMs: 1000 * 60 * 60, // 1 hour
   debounceMs: 300,             // 300ms aggregation window (default)
   breakerMaxFailures: 3,
-  cacheKeyStrategy: 'intelligent', // or 'exact', or a custom function
-  intelligentFields: ['model', 'messages', 'prompt'], // Customize intelligent hashing
+  globalBreakerMaxFailures: 10,   // Process-wide safety net
+  intelligentFields: ['model', 'messages', 'prompt', 'system'], // Customize intelligent hashing
   aiEndpoints: [/api\.my-custom-llm\.com/, 'other-provider.com'], // Supports String or RegExp
   auditHandler: (event) => console.log('Quota Guard Event:', event.type, event.key)
 });
@@ -99,16 +99,25 @@ injectQuotaGuard({
 
 | Event Type | Description |
 | :--- | :--- |
+| `request_started` | Interceptor detected a matching AI request. |
+| `debounced` | Request held in the aggregation window. |
 | `cache_hit` | Returned a previously cached response. |
 | `live_called` | No cache/dedup found, calling native network. |
 | `in_flight_shared` | Multiple calls detected; joined an existing live stream. |
 | `breaker_opened` | Circuit breaker active for this key; request blocked. |
+| `global_breaker_opened` | Safety threshold reached across different requests; all blocked. |
 | `request_failed` | Native request returned non-OK status. |
+| `request_aborted` | Native request was cancelled by the user. |
 | `pass_through` | Request didn't match any AI endpoints or encountered an error. |
 
 ## How It Works
 - **Network Coverage**: Powered by `@mswjs/interceptors`. It covers `fetch`, `XMLHttpRequest`, and Node.js `http`/`https` modules natively across both Node and Browser environments.
 - **Real-time Streaming**: Uses a custom `ResponseBroadcaster` to "tee" live AI streams. Even if multiple requests are deduplicated, every caller receives the stream chunks simultaneously in real-time.
-- **Provider Intelligence**: Auto-detects major AI providers (OpenAI, Anthropic, Gemini, DeepSeek) to extract exact semantic fields for hashing, ensuring `temperature` or `stream: true` flags don't break your cache.
+- **Provider Intelligence**: Auto-detects major AI providers to extract exact semantic fields for hashing. Supported natively:
+    - **OpenAI** (and OpenAI-compatible proxies)
+    - **Anthropic**
+    - **Google Gemini**
+    - **DeepSeek**
+- **Safe Bypass**: Send the header `X-Quota-Guard-Bypass: true` (or standard `cache-control: no-cache`) to force a live call while still keeping the circuit breaker active.
 ...
 

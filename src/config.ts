@@ -13,12 +13,14 @@ export interface QuotaGuardRule {
 export interface QuotaGuardConfig {
   /** If false, Quota Guard transparently passes everything through. Default: true in dev, false in prod */
   enabled: boolean;
-  /** List of hostnames (strings or regex strings like "/.../") to intercept natively. */
-  aiEndpoints: string[];
+  /** List of hostnames (strings or regex objects) to intercept natively. */
+  aiEndpoints: (string | RegExp)[];
   /** Debug cache TTL in milliseconds. Default: 3600000 (1 hour) */
   cacheTtlMs: number;
-  /** Max consecutive failures before breaker opens. Default: 3 */
+  /** Max consecutive failures before breaker opens for a specific key. Default: 3 */
   breakerMaxFailures: number;
+  /** Global fail-safe: Max consecutive failures across ALL requests before breaker opens. Default: 10 */
+  globalBreakerMaxFailures: number;
   /** Breaker cool-off period in MS. Default: 30000 (30s) */
   breakerResetTimeoutMs: number;
   /** Time in ms to delay requests and merge identical in-flight requests. 0 to disable. Default: 300 */
@@ -41,7 +43,7 @@ export interface QuotaGuardConfig {
 
 
 export interface AuditEvent {
-  type: 'request_started' | 'cache_hit' | 'live_called' | 'in_flight_shared' | 'debounced' | 'breaker_opened' | 'request_failed' | 'request_aborted' | 'pass_through';
+  type: 'request_started' | 'cache_hit' | 'live_called' | 'in_flight_shared' | 'debounced' | 'breaker_opened' | 'request_failed' | 'request_aborted' | 'pass_through' | 'global_breaker_opened';
   key: string;
   url: string;
   timestamp: number;
@@ -64,13 +66,14 @@ export const getDefaultConfig = (): QuotaGuardConfig => {
     aiEndpoints: [...DEFAULT_AI_ENDPOINTS],
     cacheTtlMs: 1000 * 60 * 60, // 1 hour for debug caching
     breakerMaxFailures: 3,
+    globalBreakerMaxFailures: 10,
     breakerResetTimeoutMs: 30000,
     debounceMs: 300,
     cacheKeyStrategy: 'intelligent',
     intelligentFields: ['model', 'messages', 'prompt', 'system', 'contents', 'message'],
     rules: [],
     keyHeaders: [],
-    bypassCacheHeaders: ['cache-control', 'pragma'],
+    bypassCacheHeaders: ['cache-control', 'pragma', 'x-quota-guard-bypass'],
   };
 };
 
