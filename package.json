@@ -1,6 +1,6 @@
 {
   "name": "@shuangwhywhy/quota-guard",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Zero-intrusion AI Call Guard and debug cost-saving kernel for model invocations",
   "repository": {
     "type": "git",
