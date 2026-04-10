@@ -12,6 +12,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write  # Required for NPM Trusted Publishing
 
     steps:
       - uses: actions/checkout@v4
@@ -20,7 +21,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
         run: npm ci
@@ -32,13 +32,12 @@ jobs:
         run: npm run build
 
       - name: Publish to NPM
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public --provenance
+        # NPM Trusted Publishing automatically detects the OIDC token from the environment
 
       - name: Publish to GitHub Packages
         run: |
-          npm config set registry https://npm.pkg.github.com/
+          npm config set @shuangwhywhy:registry https://npm.pkg.github.com/
           npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
