@@ -9,7 +9,7 @@ export interface ProviderRule {
 export const PROVIDER_RULES: ProviderRule[] = [
   {
     name: 'openai',
-    hostnameMatch: /api\.openai\.com/,
+    hostnameMatch: /api\.openai\.com|api\.groq\.com|api\.perplexity\.ai|oai\.huggingface\.co/,
     extractSemanticFields: (body) => ({
       model: body.model as unknown as string,
       messages: body.messages as unknown as unknown[],

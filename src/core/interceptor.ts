@@ -14,12 +14,13 @@ import { getMetadata, setMetadata } from './metadata';
 // Conditional import for Node-only interceptor to avoid browser bundling issues
 type ClientRequestInterceptorType = new () => Interceptor<HttpRequestEventMap>;
 let ClientRequestInterceptor: ClientRequestInterceptorType | null = null;
-const isNode = typeof process !== 'undefined' && process.versions && process.versions.node;
+const isNode = typeof process !== 'undefined' && process.versions && (process.versions as unknown as Record<string, string>).node;
 if (isNode) {
-  const m = '@mswjs/interceptors/ClientRequest';
-  import(m).then((mod) => {
-    ClientRequestInterceptor = mod.ClientRequestInterceptor;
-  }).catch(() => { /* ignore */ });
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { ClientRequestInterceptor: CRI } = require('@mswjs/interceptors/ClientRequest');
+    ClientRequestInterceptor = CRI;
+  } catch { /* ignore */ }
 }
 
 let batchInterceptor: BatchInterceptor<Interceptor<HttpRequestEventMap>[]> | null = null;
@@ -54,7 +55,7 @@ export const hookFetch = () => {
       // In Node.js environments (CJS or ESM), we try to get the ClientRequestInterceptor synchronously.
       // We use a dynamic import/require dance that bypasses browser bundlers.
       const CRI_PATH = '@mswjs/interceptors/ClientRequest';
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const mod = require(CRI_PATH);
       if (mod && mod.ClientRequestInterceptor) {
         interceptors.push(new mod.ClientRequestInterceptor());
@@ -76,6 +77,16 @@ export const hookFetch = () => {
   });
 
   batchInterceptor.on('request', async ({ request, controller }) => {
+    // Handle Aborted Requests
+    request.signal.addEventListener('abort', () => {
+      const meta = getMetadata(request);
+      const k = meta.key || 'unknown';
+      emitAudit({ type: 'request_aborted', key: k, url: request.url, timestamp: Date.now() });
+      if (meta.key) {
+        registry.delete(meta.key);
+      }
+    });
+
     try {
       const result = await pipeline.processRequest(request);
 
@@ -126,15 +137,6 @@ export const hookFetch = () => {
 
   });
 
-  // Handle Aborted Requests
-  batchInterceptor.on('request:aborted', ({ request }) => {
-    const meta = getMetadata(request);
-    const key = meta.key || 'unknown';
-    emitAudit({ type: 'request_aborted', key, url: request.url, timestamp: Date.now() });
-    if (meta.key) {
-      registry.delete(meta.key);
-    }
-  });
 
   batchInterceptor.on('response', async ({ response, request }) => {
     const meta = getMetadata(request);
@@ -211,8 +213,15 @@ export const createFetchInterceptor = (nativeFetch: typeof globalThis.fetch) => 
     let key: string | undefined;
     let resolveBroadcaster: ((b: ResponseBroadcaster) => void) | undefined;
     let pipelineRequest: Request;
+    
     try {
       pipelineRequest = (input instanceof Request) ? input.clone() : new Request(input, init);
+    } catch {
+      // If malformed URL or Request init fails, bypass guard and call native directly
+      return nativeFetch(input, init);
+    }
+
+    try {
       const result = await pipeline.processRequest(pipelineRequest);
 
       if (result.error && result.error instanceof CircuitBreakerError) {
@@ -234,20 +243,17 @@ export const createFetchInterceptor = (nativeFetch: typeof globalThis.fetch) => 
       }
     } catch (err) {
       if (err instanceof Error && (err.name === 'CircuitBreakerError' || err.message.includes('Circuit breaker'))) throw err;
-      // Fail-safe: ensure pipelineRequest is at least a valid Request if something went wrong before it was assigned
-      if (!(pipelineRequest! instanceof Request)) {
-        pipelineRequest = (input instanceof Request) ? input.clone() : new Request(input, init);
-      }
     }
 
     // 2. Real Network Call (MUST throw if it rejects)
     let response: Response;
     try {
       response = await nativeFetch(input, init);
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (key) {
-        const errorName = err?.name || (err instanceof Error ? err.name : 'Unknown');
-        if (errorName === 'AbortError' || errorName === 'CanceledError' || (err?.message && err.message.includes('aborted'))) {
+        const errorObject = err as Record<string, unknown> | null;
+        const errorName = errorObject?.name || (err instanceof Error ? err.name : 'Unknown');
+        if (errorName === 'AbortError' || errorName === 'CanceledError' || (errorObject?.message && String(errorObject.message).includes('aborted'))) {
           emitAudit({ type: 'request_aborted', key, url: pipelineRequest.url, timestamp: Date.now() });
         } else {
           globalBreaker.recordFailure(key);

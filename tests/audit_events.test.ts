@@ -53,9 +53,9 @@ describe('Audit Event Coverage (Unit)', () => {
         method: 'POST', 
         body: JSON.stringify({ prompt: 'abort test' }),
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       // confirm it propagated
-      expect(err.name).toBe('AbortError');
+      expect((err as Error).name).toBe('AbortError');
     }
 
     const events = auditHandler.mock.calls.map(c => c[0].type);

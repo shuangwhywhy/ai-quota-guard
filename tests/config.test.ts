@@ -59,10 +59,9 @@ describe('Quota Guard Config Management', () => {
     expect(DEFAULT_AI_ENDPOINTS).toContain('api.openai.com');
     expect(DEFAULT_AI_ENDPOINTS).toContain('api.anthropic.com');
     expect(DEFAULT_AI_ENDPOINTS).toContain('api.deepseek.com');
-    expect(DEFAULT_AI_ENDPOINTS).toContain('generativelanguage.googleapis.com');
-    expect(DEFAULT_AI_ENDPOINTS).toContain('api.cohere.ai');
-    expect(DEFAULT_AI_ENDPOINTS).toContain('api.mistral.ai');
-    expect(DEFAULT_AI_ENDPOINTS.length).toBe(6);
+    expect(DEFAULT_AI_ENDPOINTS).toContain('api.groq.com');
+    expect(DEFAULT_AI_ENDPOINTS).toContain('api.perplexity.ai');
+    expect(DEFAULT_AI_ENDPOINTS.length).toBe(9);
   });
 
   it('allows adding custom AI endpoints via override', () => {
