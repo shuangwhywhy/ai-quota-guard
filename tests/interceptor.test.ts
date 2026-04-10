@@ -108,7 +108,10 @@ describe('Quota Guard Fetch Interceptor', () => {
     await expect(guardedFetch(url, init)).rejects.toThrow('Network offline');
 
     // Failure 3 - Circuit Breaker should intercept before fetching!
-    await expect(guardedFetch(url, init)).rejects.toThrow('Circuit breaker OPEN');
+    const res = await guardedFetch(url, init);
+    expect(res.status).toBe(599);
+    expect(res.headers.get('X-Quota-Guard-Reason')).toBe('breaker-open');
+    expect(await res.text()).toContain('Circuit breaker open');
     
     // fetch was indeed only called 2 times
     expect(nativeFetchMock).toHaveBeenCalledTimes(2);

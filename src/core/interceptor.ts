@@ -1,23 +1,28 @@
-import { BatchInterceptor } from '@mswjs/interceptors';
+import { BatchInterceptor, HttpRequestEventMap, Interceptor } from '@mswjs/interceptors';
 import { FetchInterceptor } from '@mswjs/interceptors/fetch';
 import { XMLHttpRequestInterceptor } from '@mswjs/interceptors/XMLHttpRequest';
 import { getConfig, QuotaGuardConfig, AuditEvent } from '../config';
 import { globalCache, SerializedCacheEntry } from '../cache/memory';
 import { globalInFlightRegistry, globalInFlightRegistry as registry } from '../registry/in-flight';
-import { globalBreaker } from '../breaker/circuit-breaker';
+import { globalBreaker, CircuitBreakerError } from '../breaker/circuit-breaker';
 import { GuardPipeline } from './pipeline';
 import { ResponseBroadcaster } from '../streams/broadcaster';
 
+import { getMetadata, setMetadata } from './metadata';
+
 // Conditional import for Node-only interceptor to avoid browser bundling issues
-let ClientRequestInterceptor: any = null;
+type ClientRequestInterceptorType = new () => Interceptor<HttpRequestEventMap>;
+let ClientRequestInterceptor: ClientRequestInterceptorType | null = null;
 const isNode = typeof process !== 'undefined' && process.versions && process.versions.node;
 if (isNode) {
   try {
-    ClientRequestInterceptor = require('@mswjs/interceptors/ClientRequest').ClientRequestInterceptor;
+    const m = '@mswjs/interceptors/ClientRequest';
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    ClientRequestInterceptor = require(m).ClientRequestInterceptor;
   } catch { /* ignore */ }
 }
 
-let batchInterceptor: BatchInterceptor<any> | null = null;
+let batchInterceptor: BatchInterceptor<Interceptor<HttpRequestEventMap>[]> | null = null;
 
 const emitAudit = (event: AuditEvent) => {
   const config = getConfig();
@@ -48,7 +53,7 @@ function bufferToBase64(buffer: ArrayBuffer): string {
 export const hookFetch = () => {
   if (batchInterceptor) return;
 
-  const interceptors = [
+  const interceptors: Interceptor<HttpRequestEventMap>[] = [
     new FetchInterceptor(),
     new XMLHttpRequestInterceptor(),
   ];
@@ -62,22 +67,30 @@ export const hookFetch = () => {
     interceptors,
   });
 
-  (batchInterceptor as any).on('request', async (params: any) => {
-    const { request, controller } = params;
-    
+  batchInterceptor.on('request', async ({ request, controller }) => {
     try {
       const result = await pipeline.processRequest(request);
 
       if (result.error) {
-        controller.respondWith(Response.error());
+        if (result.error instanceof CircuitBreakerError) {
+          controller.respondWith(new Response('Quota Guard: Circuit breaker open.', {
+            status: 599,
+            statusText: 'Quota Guard: Circuit Breaker Open',
+            headers: { 'X-Quota-Guard-Reason': 'breaker-open' }
+          }));
+        } else {
+          controller.respondWith(Response.error());
+        }
         return;
       }
 
       if (result.response) {
-        // XHR Compatibility Fix: JSDOM XHR doesn't support ReadableStream payloads well.
+        // XHR Compatibility Fix: JSDOM XHR and some environments don't support ReadableStream payloads well.
+        // We detect XHR by checking 'X-Requested-With' or using a more robust environment check.
         const isXhr = request.headers.get('x-requested-with') === 'XMLHttpRequest' || 
-                      (typeof window !== 'undefined' && params.request && params.request.constructor.name === 'XMLHttpRequest');
+                      (typeof XMLHttpRequest !== 'undefined' && request instanceof Request && !('referrerPolicy' in request) && (typeof window !== 'undefined'));
         
+        // Fail-safe: If we are in a browser-like env (JSDOM) and it's a stream, convert to ArrayBuffer if body is a stream
         if (isXhr && result.response.body && !result.response.bodyUsed) {
            const buffer = await result.response.clone().arrayBuffer();
            controller.respondWith(new Response(buffer, { 
@@ -92,8 +105,10 @@ export const hookFetch = () => {
 
       if (result.key) {
         emitAudit({ type: 'live_called', key: result.key, url: request.url, timestamp: Date.now() });
-        (request as any).__qg_key = result.key;
-        (request as any).__qg_resolve = result.resolveBroadcaster;
+        setMetadata(request, { 
+          key: result.key, 
+          resolveBroadcaster: result.resolveBroadcaster 
+        });
       } else {
         emitAudit({ type: 'pass_through', key: 'none', url: request.url, timestamp: Date.now() });
       }
@@ -103,13 +118,12 @@ export const hookFetch = () => {
 
   });
 
-  (batchInterceptor as any).on('response', async (params: any) => {
-    const { response, request } = params;
-
-    const key = (request as any).__qg_key;
+  batchInterceptor.on('response', async ({ response, request }) => {
+    const meta = getMetadata(request);
+    const key = meta.key;
     if (!key) return;
 
-    const resolveBroadcaster = (request as any).__qg_resolve;
+    const resolveBroadcaster = meta.resolveBroadcaster;
     const config = getConfig();
     const activeCache = config.cacheAdapter || globalCache;
 
@@ -177,8 +191,12 @@ export const createFetchInterceptor = (nativeFetch: typeof globalThis.fetch) => 
       const pipelineRequest = (input instanceof Request) ? input.clone() : new Request(input, init);
       const result = await pipeline.processRequest(pipelineRequest);
 
-      if (result.error && result.error.name === 'CircuitBreakerError') {
-        throw result.error;
+      if (result.error && result.error instanceof CircuitBreakerError) {
+        return new Response('Quota Guard: Circuit breaker open.', {
+          status: 599,
+          statusText: 'Quota Guard: Circuit Breaker Open',
+          headers: { 'X-Quota-Guard-Reason': 'breaker-open' }
+        });
       }
 
       if (result.response) {
@@ -190,8 +208,8 @@ export const createFetchInterceptor = (nativeFetch: typeof globalThis.fetch) => 
       if (key) {
         emitAudit({ type: 'live_called', key, url: pipelineRequest.url, timestamp: Date.now() });
       }
-    } catch (err: any) {
-      if (err.name === 'CircuitBreakerError' || (err.message && err.message.includes('Circuit breaker'))) throw err;
+    } catch (err) {
+      if (err instanceof Error && (err.name === 'CircuitBreakerError' || err.message.includes('Circuit breaker'))) throw err;
     }
 
     // 2. Real Network Call (MUST throw if it rejects)

@@ -1,5 +1,7 @@
 import { extractSemanticFields } from '../providers/registry';
 
+export type JSONValue = string | number | boolean | null | { [key: string]: JSONValue } | JSONValue[];
+
 function simpleFnv1a(str: string): string {
   // Graceful fallback if native Crypto is somehow ripped out
   let h1 = 0x811c9dc5;
@@ -41,21 +43,21 @@ async function sha256Hash(str: string): Promise<string> {
   return simpleFnv1a(str);
 }
 
-function isPlainObject(value: any): boolean {
+function isPlainObject(value: unknown): value is Record<string, JSONValue> {
   return typeof value === 'object' && value !== null && !Array.isArray(value) && !(value instanceof Date) && !(value instanceof RegExp);
 }
 
-export function deepSortKeys(obj: any): any {
+export function deepSortKeys(obj: JSONValue): JSONValue {
   if (Array.isArray(obj)) {
-    return obj.map(deepSortKeys);
+    return (obj as JSONValue[]).map(deepSortKeys);
   }
   if (isPlainObject(obj)) {
-    return Object.keys(obj)
-      .sort()
-      .reduce((acc, key) => {
-        acc[key] = deepSortKeys(obj[key]);
-        return acc;
-      }, {} as any);
+    const result: Record<string, JSONValue> = {};
+    const sortedKeys = Object.keys(obj).sort();
+    for (const key of sortedKeys) {
+      result[key] = deepSortKeys(obj[key]);
+    }
+    return result;
   }
   return obj;
 }
@@ -65,14 +67,14 @@ export const INTELLIGENT_KEY_FIELDS = ['model', 'messages', 'prompt', 'system', 
 export const generateStableKey = async (
   url: string | URL, 
   method: string, 
-  body?: any, 
-  strategy: 'intelligent' | 'exact' | ((u: string, m: string, b: any) => any) = 'intelligent'
+  body?: string | JSONValue, 
+  strategy: 'intelligent' | 'exact' | ((u: string, m: string, b: JSONValue) => JSONValue) = 'intelligent'
 ): Promise<string | null> => {
   const urlStr = url.toString();
   let normalizedBody = '';
 
   if (body) {
-    let parsedBody: any = null;
+    let parsedBody: JSONValue = null;
     if (typeof body === 'string') {
       try {
         parsedBody = JSON.parse(body);

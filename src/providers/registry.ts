@@ -50,33 +50,44 @@ export const PROVIDER_RULES: ProviderRule[] = [
 export function extractSemanticFields(urlStr: string, body: any): any {
   if (typeof body !== 'object' || body === null) return body;
 
+  const config = getConfig();
+  const genericFields = config.intelligentFields || ['model', 'messages', 'prompt', 'system', 'contents', 'message'];
+  
   const rule = PROVIDER_RULES.find(r => {
     if (r.hostnameMatch instanceof RegExp) {
       return r.hostnameMatch.test(urlStr);
     }
-    return urlStr.includes(r.hostnameMatch);
+    const matchStr = String(r.hostnameMatch);
+    // Be careful with URL parsing to avoid false positives in pathname
+    try {
+      const url = new URL(urlStr.startsWith('http') ? urlStr : 'https://' + urlStr);
+      return url.hostname.includes(matchStr);
+    } catch {
+      return urlStr.includes(matchStr);
+    }
   });
 
+  const result: any = {};
+  
+  // 1. Extract provider-specific fields if matched
   if (rule) {
     const fields = rule.extractSemanticFields(body);
-    // Remove undefined fields
-    const filtered = Object.fromEntries(Object.entries(fields).filter(([_, v]) => v !== undefined));
-    
-    // If no whitelisted fields were found even for a matched provider, 
-    // fall back to the full body to ensure distinct inputs yield distinct keys.
-    if (Object.keys(filtered).length === 0) return body;
-    
-    return filtered;
+    Object.assign(result, fields);
   }
 
-
-  // Fallback to a generic list from config if no specific provider matched
-  const config = getConfig();
-  const genericFields = config.intelligentFields || ['model', 'messages', 'prompt', 'system', 'contents', 'message'];
-  const result: any = {};
+  // 2. Supplement with generic fields from config (user's custom fields)
   for (const f of genericFields) {
-    if (body[f] !== undefined) result[f] = body[f];
+    if (body[f] !== undefined) {
+      result[f] = body[f];
+    }
   }
-  return Object.keys(result).length > 0 ? result : body;
+
+  // Remove undefined/null fields
+  const filtered = Object.fromEntries(
+    Object.entries(result).filter(([_, v]) => v !== undefined && v !== null)
+  );
+  
+  // Final fallback: if nothing extracted, return full body to avoid collisions
+  return Object.keys(filtered).length > 0 ? filtered : body;
 }
 

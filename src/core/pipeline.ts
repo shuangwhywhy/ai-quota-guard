@@ -91,8 +91,8 @@ export class GuardPipeline {
       globalInFlightRegistry.set(key, broadcasterPromise);
 
       return { key, resolveBroadcaster };
-    } catch (e: any) {
-      return { error: e };
+    } catch (e: unknown) {
+      return { error: e instanceof Error ? e : new Error(String(e)) };
     }
   }
 
@@ -100,7 +100,7 @@ export class GuardPipeline {
 
 
 
-  private isGuarded(urlStr: string, method: string, config: any): boolean {
+  private isGuarded(urlStr: string, method: string, config: QuotaGuardConfig): boolean {
     if (!config.enabled || method === 'OPTIONS') return false;
     const endpoints = config.aiEndpoints;
     try {

@@ -8,7 +8,7 @@ During development, UI re-renders, automatic effects, and repetitive debugging s
 Quota Guard seamlessly intercepts **all** network calls — including `globalThis.fetch` and Node.js native `http`/`https` modules — specifically bound for AI endpoints. Without writing a **single line of wrapper code in your business logic**, it provides:
 
 1. **In-Flight Deduplication**: Share the exact same network promise for identical parallel requests.
-2. **Debounce**: Unintentional rapid-fires are cleanly throttled (default: 300ms).
+2. **Request Aggregation (Debounce)**: rapid-fire requests are held and released simultaneously to maximize deduplication (default: 300ms).
 3. **Debug Caching**: Eliminates cost for identical prompts across a dev session.
 4. **Circuit Breaker**: Stops runaway loops from nuking your API keys by failing short after a threshold.
 5. **Zero-Hardcoding**: Injected strictly via Node `--require`/`--import` or Vite plugins, leaving your production bundle untouched.
@@ -75,9 +75,8 @@ const myAxios = axios.create();
 hookAxios(myAxios); // Now this instance is guarded!
 ```
 
-### 5. Native SDK Support
-...
-```
+### 5. Native Native Interception
+Quota Guard is designed to be zero-intrusion. Once injected via the Node register or Vite plugin, it automatically covers `fetch`, `XMLHttpRequest`, and Node.js `http`/`https` modules without any configuration for specific SDKs.
 
 ## Advanced Configuration
 ...
@@ -85,7 +84,7 @@ hookAxios(myAxios); // Now this instance is guarded!
 injectQuotaGuard({
   enabled: process.env.NODE_ENV === 'development',
   cacheTtlMs: 1000 * 60 * 60, // 1 hour
-  debounceMs: 300,             // 300ms debounce window (default)
+  debounceMs: 300,             // 300ms aggregation window (default)
   breakerMaxFailures: 3,
   cacheKeyStrategy: 'intelligent', // or 'exact', or a custom function
   intelligentFields: ['model', 'messages', 'prompt'], // Customize intelligent hashing
@@ -98,12 +97,12 @@ injectQuotaGuard({
 
 | Event Type | Description |
 | :--- | :--- |
-| `request_started` | Interceptor caught a new request. |
 | `cache_hit` | Returned a previously cached response. |
 | `live_called` | No cache/dedup found, calling native network. |
 | `in_flight_shared` | Multiple calls detected; joined an existing live stream. |
 | `breaker_opened` | Circuit breaker active for this key; request blocked. |
 | `request_failed` | Native request returned non-OK status. |
+| `pass_through` | Request didn't match any AI endpoints or encountered an error. |
 
 ## How It Works
 - **Network Coverage**: Powered by `@mswjs/interceptors`. It covers `fetch`, `XMLHttpRequest`, and Node.js `http`/`https` modules natively across both Node and Browser environments.

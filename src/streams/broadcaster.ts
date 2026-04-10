@@ -34,10 +34,11 @@ export class ResponseBroadcaster {
     }
 
     const self = this;
+    let currentController: ReadableStreamDefaultController;
     const stream = new ReadableStream({
       start(controller) {
+        currentController = controller;
         // Send all chunks we've already collected to catch up the late subscriber
-        // (Though for AI calls, they usually start at the same time due to debounce)
         for (const chunk of self.bufferedChunks) {
           controller.enqueue(chunk);
         }
@@ -48,8 +49,10 @@ export class ResponseBroadcaster {
           self.controllers.add(controller);
         }
       },
-      cancel(reason) {
-        self.controllers.delete(this as any);
+      cancel() {
+        if (currentController) {
+          self.controllers.delete(currentController);
+        }
       }
     });
 
