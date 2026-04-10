@@ -114,7 +114,8 @@ export class GuardPipeline {
         }
 
         // 7. In-Flight (Dedup) Check - Using Broadcaster for "Streaming Live" (Safety Guard - Mandatory)
-        const entry = globalInFlightRegistry.get(key);
+        // Skip In-Flight check if explicit bypass is requested to allow a "True Isolated Live Call".
+        const entry = !hasExplicitBypass ? globalInFlightRegistry.get(key) : null;
         if (entry) {
           this.logFingerprintConflict(currentSnapshot, entry.snapshot, key);
           this.emitAudit({ type: 'in_flight_shared', key, url: requestUrl, timestamp: Date.now() });

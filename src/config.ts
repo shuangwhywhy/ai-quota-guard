@@ -58,7 +58,10 @@ export const DEFAULT_AI_ENDPOINTS = [
   'api.deepseek.com',
   'generativelanguage.googleapis.com',
   'api.cohere.ai',
-  'api.mistral.ai'
+  'api.mistral.ai',
+  'api.groq.com',
+  'api.perplexity.ai',
+  'oai.huggingface.co'
 ];
 
 export const getDefaultConfig = (): QuotaGuardConfig => {
