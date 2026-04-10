@@ -37,6 +37,10 @@ export class CircuitBreaker {
     }
     return false;
   }
+
+  clear(): void {
+    this.states.clear();
+  }
 }
 
 export const globalBreaker = new CircuitBreaker();

@@ -7,6 +7,7 @@ import { globalInFlightRegistry, globalInFlightRegistry as registry } from '../r
 import { globalBreaker, CircuitBreakerError } from '../breaker/circuit-breaker';
 import { GuardPipeline } from './pipeline';
 import { ResponseBroadcaster } from '../streams/broadcaster';
+import { bufferToBase64 } from '../utils/encoding';
 
 import { getMetadata, setMetadata } from './metadata';
 
@@ -35,17 +36,7 @@ const emitAudit = (event: AuditEvent) => {
 
 const pipeline = new GuardPipeline(emitAudit);
 
-function bufferToBase64(buffer: ArrayBuffer): string {
-  if (typeof Buffer !== 'undefined') {
-    return Buffer.from(buffer).toString('base64');
-  }
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
+// Removed local bufferToBase64, now imported from utils
 
 /**
  * Global Network Hook: Unified for Node and Browsers.

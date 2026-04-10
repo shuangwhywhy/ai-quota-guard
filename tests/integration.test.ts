@@ -50,19 +50,21 @@ describe('Full Integration Lifecycle', () => {
     });
 
     QuotaGuard.unhookFetch();
-    QuotaGuard.injectQuotaGuard({ enabled: true, aiEndpoints: ['api.openai.com'] });
+    QuotaGuard.injectQuotaGuard({ enabled: true, aiEndpoints: ['localhost'] });
     
     // In Vitest/Node, we use http.request to ensure we trip the ClientRequestInterceptor
+    // We use a local hostname to avoid real network calls if interception fails
     await new Promise((resolve) => {
       const req = http.request({
-        hostname: 'api.openai.com',
+        hostname: 'localhost',
+        port: 8080, // arbitrary port
         path: '/v1/chat/completions',
         method: 'POST',
       }, (res) => {
         res.on('data', () => {});
         res.on('end', resolve);
       });
-      req.on('error', resolve);
+      req.on('error', resolve); // Fail fast
       req.write(JSON.stringify({ model: 'gpt-4' }));
       req.end();
     });

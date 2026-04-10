@@ -18,15 +18,22 @@ export class ResponseBroadcaster {
    * Creates a new Response that will receive the stream in real-time.
    */
   subscribe(): Response {
+    const noBodyStatuses = [101, 204, 205, 304];
+    const canHaveBody = !noBodyStatuses.includes(this.originalResponse.status);
+
     if (this.isFinished) {
-      const totalLength = this.bufferedChunks.reduce((acc, chunk) => acc + chunk.length, 0);
-      const result = new Uint8Array(totalLength);
-      let offset = 0;
-      for (const chunk of this.bufferedChunks) {
-        result.set(chunk, offset);
-        offset += chunk.length;
+      let body: Uint8Array | null = null;
+      if (canHaveBody) {
+        const totalLength = this.bufferedChunks.reduce((acc, chunk) => acc + chunk.length, 0);
+        body = new Uint8Array(totalLength);
+        let offset = 0;
+        for (const chunk of this.bufferedChunks) {
+          body.set(chunk, offset);
+          offset += chunk.length;
+        }
       }
-      return new Response(result, {
+      
+      return new Response(body as BodyInit | null, {
         status: this.originalResponse.status,
         statusText: this.originalResponse.statusText,
         headers: this.originalResponse.headers
@@ -56,7 +63,7 @@ export class ResponseBroadcaster {
       }
     });
 
-    return new Response(stream, {
+    return new Response((canHaveBody ? stream : null) as BodyInit | null, {
       status: this.originalResponse.status,
       statusText: this.originalResponse.statusText,
       headers: this.originalResponse.headers

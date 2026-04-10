@@ -15,11 +15,22 @@ export class InFlightRegistry {
     this.inFlight.delete(key);
   }
 
+  get size(): number {
+    return this.inFlight.size;
+  }
+
   clear(): void {
     this.inFlight.clear();
   }
 }
 
-export const globalInFlightRegistry = new InFlightRegistry();
+const GLOBAL_KEY = '__QUOTA_GUARD_IN_FLIGHT_REGISTRY__';
+
+// Use a truly global instance to survive multiple library loads in browser/node
+if (!(globalThis as any)[GLOBAL_KEY]) {
+  (globalThis as any)[GLOBAL_KEY] = new InFlightRegistry();
+}
+
+export const globalInFlightRegistry = (globalThis as any)[GLOBAL_KEY] as InFlightRegistry;
 
 
