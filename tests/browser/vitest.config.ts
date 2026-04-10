@@ -7,7 +7,7 @@ export default defineConfig({
     globals: true,
     browser: {
       enabled: true,
-      provider: playwright(), // FIX: playwright is a function that must be called
+      provider: playwright(), // FIX: playwright is a function call
       instances: [
         { browser: 'chromium' }
       ],
