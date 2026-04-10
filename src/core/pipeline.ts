@@ -92,7 +92,9 @@ export class GuardPipeline {
 
         if (cached && !hasExplicitBypass) {
           if (hasBypassHeader) {
-            this.logIntentConflict('BYPASS_IGNORED', requestUrl, key, 'cache-control: no-cache (or equivalent)', 'Served from cache (Safety Policy)');
+            // Guard Priority: Business-level bypass headers are ignored to protect the budget.
+            // Only config-driven bypass or internal bypass headers are honored.
+            this.logIntentConflict('BYPASS_IGNORED', requestUrl, key, 'business-level cache-control', 'Served from cache (Guard Safety Policy)');
             const buffer = this.base64ToBuffer(cached.responsePayloadBase64);
             return { 
               response: new Response(buffer, { status: cached.status, headers: cached.headers }), 
@@ -116,9 +118,12 @@ export class GuardPipeline {
         if (entry) {
           this.logFingerprintConflict(currentSnapshot, entry.snapshot, key);
           this.emitAudit({ type: 'in_flight_shared', key, url: requestUrl, timestamp: Date.now() });
+          
+          // Use configurable timeout from config. Default: 60s
+          const timeoutMs = effectiveConfig.inFlightTimeoutMs || 60000;
           const broadcaster = await Promise.race([
             entry.broadcaster instanceof Promise ? entry.broadcaster : Promise.resolve(entry.broadcaster),
-            new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Quota Guard: In-flight timeout')), 10000))
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`Quota Guard: In-flight timeout after ${timeoutMs}ms`)), timeoutMs))
           ]);
           
           return { 

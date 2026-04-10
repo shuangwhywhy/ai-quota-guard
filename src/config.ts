@@ -25,6 +25,8 @@ export interface QuotaGuardConfig {
   breakerResetTimeoutMs: number;
   /** Time in ms to delay requests and merge identical in-flight requests. 0 to disable. Default: 300 */
   debounceMs: number;
+  /** Max time in ms to wait for a shared in-flight request before timing out. Default: 60000 (60s) */
+  inFlightTimeoutMs: number;
   /** Strategy for generating the cache/debounce key. 'intelligent' strips noise like temperature. Default: 'intelligent' */
   cacheKeyStrategy?: 'intelligent' | 'exact' | ((url: string, method: string, body: unknown) => unknown);
   /** Custom fields to extract in 'intelligent' mode if provider is not auto-detected. */
@@ -69,6 +71,7 @@ export const getDefaultConfig = (): QuotaGuardConfig => {
     globalBreakerMaxFailures: 10,
     breakerResetTimeoutMs: 30000,
     debounceMs: 300,
+    inFlightTimeoutMs: 60000,
     cacheKeyStrategy: 'intelligent',
     intelligentFields: ['model', 'messages', 'prompt', 'system', 'contents', 'message'],
     rules: [],

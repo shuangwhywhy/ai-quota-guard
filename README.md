@@ -85,8 +85,9 @@ Quota Guard is designed to be zero-intrusion. Once injected via the Node registe
 ```typescript
 injectQuotaGuard({
   enabled: process.env.NODE_ENV === 'development',
-  cacheTtlMs: 1000 * 60 * 60, // 1 hour
-  debounceMs: 300,             // 300ms aggregation window (default)
+  cacheTtlMs: 1000 * 60 * 60,   // 1 hour
+  debounceMs: 300,               // 300ms aggregation window (default)
+  inFlightTimeoutMs: 60000,      // Max wait for shared requests (default: 60s)
   breakerMaxFailures: 3,
   globalBreakerMaxFailures: 10,   // Process-wide safety net
   intelligentFields: ['model', 'messages', 'prompt', 'system'], // Customize intelligent hashing
@@ -118,6 +119,9 @@ injectQuotaGuard({
     - **Anthropic**
     - **Google Gemini**
     - **DeepSeek**
-- **Safe Bypass**: Send the header `X-Quota-Guard-Bypass: true` (or standard `cache-control: no-cache`) to force a live call while still keeping the circuit breaker active.
+    - **Mistral**
+    - **Cohere**
+- **Safe Bypass**: Use the special internal header `X-Quota-Guard-Bypass: true` to force a live call.
+    - **Note on Guard Priority**: To protect your budget, standard business-level headers like `Cache-Control: no-cache` are **ignored** by default if a cached response exists. To bypass this, use the internal header above or configure a specific `rule` in your settings.
 ...
 

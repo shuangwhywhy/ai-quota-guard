@@ -41,6 +41,24 @@ export const PROVIDER_RULES: ProviderRule[] = [
       model: body.model as unknown as string,
       messages: body.messages as unknown as unknown[]
     })
+  },
+  {
+    name: 'mistral',
+    hostnameMatch: /api\.mistral\.ai/,
+    extractSemanticFields: (body) => ({
+      model: body.model as unknown as string,
+      messages: body.messages as unknown as unknown[],
+      prompt: body.prompt as unknown as string
+    })
+  },
+  {
+    name: 'cohere',
+    hostnameMatch: /api\.cohere\.ai/,
+    extractSemanticFields: (body) => ({
+      model: body.model as unknown as string,
+      prompt: body.prompt as unknown as string,
+      message: body.message as unknown as string
+    })
   }
 ];
 

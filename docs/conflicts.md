@@ -33,13 +33,13 @@ If you *must* separate these requests, add the missing distinguishing headers to
 **What happened?**
 You sent a bypass signal like `cache-control: no-cache`, but Quota Guard intercepted the request anyway to return a cached or in-flight result.
 
-**Why?**
-Quota Guard treats **Budget Safety** as a higher priority than "freshness" by default. This prevents a accidental loop or a "Hard Refresh" from triggering 100 parallel AI calls.
+**Why? (Guard Safety Policy)**
+Quota Guard treats **Budget Safety** as a higher priority than "freshness" by default. This prevents a accidental loop or a "Hard Refresh" in a browser from triggering hundreds of parallel AI calls and nuking your quota. By default, **business-level headers are ignored if an identical result is already protected in cache**.
 
 **How to solve?**
-1. Use the explicit bypass header: `X-Quota-Guard-Bypass: true`. (Natively supported by default)
-2. Send standard `Cache-Control: no-cache` or `Pragma: no-cache`.
-3. Configure a **Rule** to allow passthrough for specific endpoints (see below).
+1. **Explicit Internal Bypass**: Use the special header `X-Quota-Guard-Bypass: true`. This is the only header guaranteed to skip the cache.
+2. **Configuration Rule**: Define a `rule` for the specific endpoint with `cacheTtlMs: 0` or `debounceMs: 0` to permanently allow passthrough.
+3. **Internal Key Headers**: If you need different results for different users, add distinguishing headers to `keyHeaders` in your config.
 
 ---
 

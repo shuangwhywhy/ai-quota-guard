@@ -48,8 +48,26 @@ export const hookFetch = () => {
     new XMLHttpRequestInterceptor(),
   ];
 
-  if (ClientRequestInterceptor) {
-    interceptors.push(new ClientRequestInterceptor());
+  // Robust Synchronous Node Injection
+  if (isNode) {
+    try {
+      // In Node.js environments (CJS or ESM), we try to get the ClientRequestInterceptor synchronously.
+      // We use a dynamic import/require dance that bypasses browser bundlers.
+      const CRI_PATH = '@mswjs/interceptors/ClientRequest';
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const mod = require(CRI_PATH);
+      if (mod && mod.ClientRequestInterceptor) {
+        interceptors.push(new mod.ClientRequestInterceptor());
+      }
+    } catch {
+      // If require fails (e.g. in pure ESM without compatible loader), we fallback to the already-started async load
+      if (ClientRequestInterceptor) {
+        interceptors.push(new ClientRequestInterceptor());
+      } else {
+        // eslint-disable-next-line no-console
+        console.warn('[Quota Guard] Node.js bridge loading asynchronously. Initial requests might be unguarded.');
+      }
+    }
   }
 
   batchInterceptor = new BatchInterceptor({
@@ -106,6 +124,16 @@ export const hookFetch = () => {
       emitAudit({ type: 'pass_through', key: 'error', url: request.url, timestamp: Date.now() });
     }
 
+  });
+
+  // Handle Aborted Requests
+  batchInterceptor.on('request:aborted', ({ request }) => {
+    const meta = getMetadata(request);
+    const key = meta.key || 'unknown';
+    emitAudit({ type: 'request_aborted', key, url: request.url, timestamp: Date.now() });
+    if (meta.key) {
+      registry.delete(meta.key);
+    }
   });
 
   batchInterceptor.on('response', async ({ response, request }) => {
@@ -182,9 +210,9 @@ export const createFetchInterceptor = (nativeFetch: typeof globalThis.fetch) => 
   return async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
     let key: string | undefined;
     let resolveBroadcaster: ((b: ResponseBroadcaster) => void) | undefined;
-    
+    let pipelineRequest: Request;
     try {
-      const pipelineRequest = (input instanceof Request) ? input.clone() : new Request(input, init);
+      pipelineRequest = (input instanceof Request) ? input.clone() : new Request(input, init);
       const result = await pipeline.processRequest(pipelineRequest);
 
       if (result.error && result.error instanceof CircuitBreakerError) {
@@ -206,15 +234,24 @@ export const createFetchInterceptor = (nativeFetch: typeof globalThis.fetch) => 
       }
     } catch (err) {
       if (err instanceof Error && (err.name === 'CircuitBreakerError' || err.message.includes('Circuit breaker'))) throw err;
+      // Fail-safe: ensure pipelineRequest is at least a valid Request if something went wrong before it was assigned
+      if (!(pipelineRequest! instanceof Request)) {
+        pipelineRequest = (input instanceof Request) ? input.clone() : new Request(input, init);
+      }
     }
 
     // 2. Real Network Call (MUST throw if it rejects)
     let response: Response;
     try {
       response = await nativeFetch(input, init);
-    } catch (err) {
+    } catch (err: any) {
       if (key) {
-        globalBreaker.recordFailure(key);
+        const errorName = err?.name || (err instanceof Error ? err.name : 'Unknown');
+        if (errorName === 'AbortError' || errorName === 'CanceledError' || (err?.message && err.message.includes('aborted'))) {
+          emitAudit({ type: 'request_aborted', key, url: pipelineRequest.url, timestamp: Date.now() });
+        } else {
+          globalBreaker.recordFailure(key);
+        }
         registry.delete(key);
       }
       throw err; // Proper propagation of native errors
