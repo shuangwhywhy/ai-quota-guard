@@ -1,17 +1,19 @@
 # Quota Guard
 
-A 100% zero-intrusive AI Call Guard and debug cost-saving kernel for Model invocations.
+A 100% **zero-intrusive** (**non-intrusive**) AI Call Guard and debug cost-saving kernel for **LLM** / **AI** model invocations.
+
+**Debug Mode** | **Rate Limit** Protection | **Token** Savings | **Quota** Management
 
 ## Why Quota Guard?
-During development, UI re-renders, automatic effects, and repetitive debugging sessions can cause hundreds of identical LLM API calls. This leads to blown budgets, rate-limiting (`429 Too Many Requests`), and slow DX.
+During development, UI re-renders, automatic effects, and repetitive **debugging** sessions can cause hundreds of identical **LLM** API calls. This leads to blown budgets, **rate-limiting** (`429 Too Many Requests`), and slow DX.
 
-Quota Guard seamlessly intercepts **all** network calls — including `globalThis.fetch` and Node.js native `http`/`https` modules — specifically bound for AI endpoints. Without writing a **single line of wrapper code in your business logic**, it provides:
+Quota Guard is a zero-intrusion **hook** that seamlessly intercepts **all** network calls — including `globalThis.fetch` and Node.js native `http`/`https` modules — specifically bound for **AI** endpoints. Without writing a **single line of wrapper code in your business logic**, it acts as a persistent **guard** providing:
 
 1. **In-Flight Deduplication**: Share the exact same network promise for identical parallel requests.
 2. **Request Aggregation (Debounce)**: rapid-fire requests are held and released simultaneously to maximize deduplication (default: 300ms).
-3. **Debug Caching**: Eliminates cost for identical prompts across a dev session.
-4. **Circuit Breaker**: Stops runaway loops from nuking your API keys by failing short after a threshold.
-5. **Zero-Hardcoding**: Injected strictly via Node `--require`/`--import` or Vite plugins, leaving your production bundle untouched.
+3. **Debug Caching**: Eliminates cost for identical prompts across a dev session (**mock**-like efficiency without manual mock maintenance).
+4. **Circuit Breaker**: Stops runaway loops from nuking your API keys (**quota** protection) by failing short after a threshold.
+5. **Zero-Intrusion**: Injected strictly via Node `--require`/`--import` or Vite plugins, leaving your production bundle untouched.
 6. **Intelligent Cache Keys**: Strips noisy parameters (`temperature`, `stream`, etc.) for higher cache hit rates.
 
 ## Usage

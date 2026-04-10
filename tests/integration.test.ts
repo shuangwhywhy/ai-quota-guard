@@ -50,8 +50,8 @@ describe('Full Integration Lifecycle', () => {
     });
 
     QuotaGuard.unhookFetch();
-    QuotaGuard.injectQuotaGuard({ enabled: true, aiEndpoints: ['localhost'] });
-    
+    QuotaGuard.injectQuotaGuard({ enabled: true, aiEndpoints: ['api.openai.com'] });
+
     // In Vitest/Node, we use http.request to ensure we trip the ClientRequestInterceptor
     // We use a local hostname to avoid real network calls if interception fails
     await new Promise((resolve) => {
@@ -61,7 +61,7 @@ describe('Full Integration Lifecycle', () => {
         path: '/v1/chat/completions',
         method: 'POST',
       }, (res) => {
-        res.on('data', () => {});
+        res.on('data', () => { });
         res.on('end', resolve);
       });
       req.on('error', resolve); // Fail fast
