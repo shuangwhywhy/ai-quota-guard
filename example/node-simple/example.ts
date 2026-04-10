@@ -23,7 +23,7 @@ async function main() {
       model: 'gpt-4',
       messages: [{ role: 'user', content: 'Hello' }],
     });
-  } catch (e) {
+  } catch {
     console.log('First request failed (expected with fake key).');
   }
 
@@ -33,7 +33,7 @@ async function main() {
       model: 'gpt-4',
       messages: [{ role: 'user', content: 'Hello' }],
     });
-  } catch (e) {
+  } catch {
     console.log('Second request failed (expected with fake key).');
   }
 

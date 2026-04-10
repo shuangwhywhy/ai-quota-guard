@@ -1,5 +1,14 @@
 import { getConfig } from './config';
 
+interface AxiosLike {
+  interceptors: {
+    request: {
+      use: (fn: (config: Record<string, unknown>) => Record<string, unknown>) => void;
+    };
+  };
+  VERSION?: string;
+}
+
 /**
  * Attaches Quota Guard to an Axios instance.
  * It strictly targets known AI endpoints and instructs Axios to dispatch them
@@ -10,16 +19,23 @@ import { getConfig } from './config';
  * @param axiosInstance - The Axios instance (e.g., `import axios from 'axios'`)
  */
 export const hookAxios = (axiosInstance: unknown) => {
-  if (!axiosInstance || typeof axiosInstance !== 'object' || !('interceptors' in axiosInstance)) {
+  if (
+    !axiosInstance || 
+    typeof axiosInstance !== 'object' || 
+    !('interceptors' in axiosInstance)
+  ) {
     // eslint-disable-next-line no-console
     console.warn('[Quota Guard] Invalid Axios instance provided.');
     return;
   }
 
-  const instance = axiosInstance as { 
-    interceptors: { request: { use: (fn: (c: Record<string, unknown>) => Record<string, unknown>) => void } };
-    VERSION?: string;
-  };
+  const instance = axiosInstance as AxiosLike;
+  
+  if (!instance.interceptors?.request) {
+    // eslint-disable-next-line no-console
+    console.warn('[Quota Guard] Axios instance lacks request interceptors.');
+    return;
+  }
   
   instance.interceptors.request.use((config) => {
     const guardConfig = getConfig();

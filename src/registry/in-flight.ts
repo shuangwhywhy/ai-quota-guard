@@ -1,13 +1,19 @@
 import type { ResponseBroadcaster } from '../streams/broadcaster';
+import type { RequestMetadata } from '../cache/memory';
+
+export interface InFlightEntry {
+  broadcaster: ResponseBroadcaster | Promise<ResponseBroadcaster>;
+  snapshot: RequestMetadata;
+}
 
 export class InFlightRegistry {
-  private inFlight = new Map<string, ResponseBroadcaster | Promise<ResponseBroadcaster>>();
+  private inFlight = new Map<string, InFlightEntry>();
 
-  set(key: string, value: ResponseBroadcaster | Promise<ResponseBroadcaster>): void {
-    this.inFlight.set(key, value);
+  set(key: string, value: ResponseBroadcaster | Promise<ResponseBroadcaster>, snapshot: RequestMetadata): void {
+    this.inFlight.set(key, { broadcaster: value, snapshot });
   }
 
-  get(key: string): ResponseBroadcaster | Promise<ResponseBroadcaster> | undefined {
+  get(key: string): InFlightEntry | undefined {
     return this.inFlight.get(key);
   }
 

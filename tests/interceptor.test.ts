@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createFetchInterceptor } from '../src/core/interceptor';
 import { setConfig } from '../src/config';
-import { globalCache, type ICacheAdapter, type SerializedCacheEntry } from '../src/cache/memory';
-import { globalBreaker } from '../src/breaker/circuit-breaker';
+import { globalCache } from '../src/cache/memory';
 import { globalInFlightRegistry } from '../src/registry/in-flight';
 
 /**
@@ -11,7 +10,7 @@ import { globalInFlightRegistry } from '../src/registry/in-flight';
  * which uses its own internal fetch routing. This keeps tests deterministic.
  */
 describe('Quota Guard Fetch Interceptor', () => {
-  let nativeFetchMock: any;
+  let nativeFetchMock: ReturnType<typeof vi.fn>;
   let guardedFetch: typeof globalThis.fetch;
 
   beforeEach(() => {
@@ -19,7 +18,7 @@ describe('Quota Guard Fetch Interceptor', () => {
     globalCache.clear();
     globalInFlightRegistry.clear?.();
     // Re-create mock for fetch
-    nativeFetchMock = vi.fn().mockImplementation(async (url: any, init: any) => {
+    nativeFetchMock = vi.fn().mockImplementation(async (_url: unknown, _init: unknown) => {
       // Simulate network delay
       await new Promise(r => setTimeout(r, 10));
       return new Response(JSON.stringify({ mock: 'data' }), {
@@ -60,7 +59,7 @@ describe('Quota Guard Fetch Interceptor', () => {
     };
 
     // Fire 3 simultaneous requests
-    const [res1, res2, res3] = await Promise.all([
+    const [res1, res2] = await Promise.all([
       guardedFetch(url, init),
       guardedFetch(url, init),
       guardedFetch(url, init)
@@ -198,7 +197,7 @@ describe('Quota Guard Fetch Interceptor', () => {
   });
 
   it('encodes cached data to Base64 to seamlessly support external Storage Adapters (IoC)', async () => {
-    const mockStorage: any = {};
+    const mockStorage: Record<string, SerializedCacheEntry> = {};
     const customAdapter: ICacheAdapter = {
       get: async (key) => mockStorage[key] || null,
       set: async (key, data) => { mockStorage[key] = data; }
@@ -335,6 +334,7 @@ describe('Quota Guard Fetch Interceptor', () => {
 
   it('degrades gracefully to native fetch when interceptor internals throw', async () => {
     // Ensure fail-safe: if key generation explodes, request still goes through
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     setConfig({ enabled: true, aiEndpoints: ['api.openai.com'], debounceMs: 0, cacheKeyStrategy: (() => { throw new Error('BOOM'); }) as any });
     guardedFetch = createFetchInterceptor(nativeFetchMock);
 
@@ -359,13 +359,13 @@ describe('Quota Guard Fetch Interceptor', () => {
 });
 
 describe('Quota Guard Multi-Provider Interception', () => {
-  let nativeFetchMock: any;
+  let nativeFetchMock: ReturnType<typeof vi.fn>;
   let guardedFetch: typeof globalThis.fetch;
 
   beforeEach(() => {
     globalCache.clear();
     globalInFlightRegistry.clear?.();
-    nativeFetchMock = vi.fn().mockImplementation(async () => {
+    nativeFetchMock = vi.fn().mockImplementation(async (_url: unknown, _init: unknown) => {
       await new Promise(r => setTimeout(r, 10));
       return new Response(JSON.stringify({ provider: 'response' }), {
         status: 200,

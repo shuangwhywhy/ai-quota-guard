@@ -124,20 +124,25 @@ export const hookFetch = () => {
       }
       // Note: We don't registry.set here anymore as pipeline.processRequest already set the promise
       // But we should replace the promise with the actual broadcaster for slightly faster future hits
-      registry.set(key, broadcaster);
+      const headersMap: Record<string, string> = {};
+      request.headers.forEach((v, k) => { headersMap[k.toLowerCase()] = v; });
+      const snapshot = { url: request.url, method: request.method, headers: headersMap };
+      
+      registry.set(key, broadcaster, snapshot);
 
       (async () => {
         try {
           const buffer = await broadcaster.getFinalBuffer();
-          const headers: Record<string, string> = {};
-          response.headers.forEach((v: string, k: string) => { headers[k] = v; });
+          const responseHeaders: Record<string, string> = {};
+          response.headers.forEach((v: string, k: string) => { responseHeaders[k] = v; });
 
           const cacheData: SerializedCacheEntry = {
             responsePayloadBase64: bufferToBase64(buffer),
-            headers,
+            headers: responseHeaders,
             status: response.status,
             timestamp: Date.now(),
             ttlMs: config.cacheTtlMs,
+            requestSnapshot: snapshot
           };
 
           if (response.ok) {
@@ -222,22 +227,36 @@ export const createFetchInterceptor = (nativeFetch: typeof globalThis.fetch) => 
           typeof response.clone === 'function' ? response.clone() : response
         );
         if (resolveBroadcaster) resolveBroadcaster(broadcaster);
-        registry.set(key, broadcaster);
+        
+        const headersMap: Record<string, string> = {};
+        const inputUrl = (input instanceof Request) ? input.url : input.toString();
+        const inputMethod = (input instanceof Request) ? input.method : (init?.method || 'GET');
+        
+        if (input instanceof Request) {
+          input.headers.forEach((v, k) => { headersMap[k.toLowerCase()] = v; });
+        } else if (init?.headers) {
+          const h = new Headers(init.headers);
+          h.forEach((v, k) => { headersMap[k.toLowerCase()] = v; });
+        }
+        const snapshot = { url: inputUrl, method: inputMethod, headers: headersMap };
+
+        registry.set(key, broadcaster, snapshot);
 
         (async () => {
           const config = getConfig();
           const activeCache = config.cacheAdapter || globalCache;
           try {
             const buffer = await broadcaster.getFinalBuffer();
-            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-            response.headers.forEach((v: string, k: string) => { headers[k] = v; });
+            const responseHeaders: Record<string, string> = { 'Content-Type': response.headers.get('Content-Type') || 'application/json' };
+            response.headers.forEach((v: string, k: string) => { responseHeaders[k] = v; });
 
             const cacheData: SerializedCacheEntry = {
               responsePayloadBase64: bufferToBase64(buffer),
-              headers,
+              headers: responseHeaders,
               status: response.status,
               timestamp: Date.now(),
               ttlMs: config.cacheTtlMs,
+              requestSnapshot: snapshot
             };
 
             if (response.ok) {

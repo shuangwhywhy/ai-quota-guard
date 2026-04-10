@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { injectQuotaGuard } from '../src/setup';
 import * as interceptor from '../src/core/interceptor';
 import { getConfig } from '../src/config';

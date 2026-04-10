@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { quotaGuardPlugin } from '../src/vite';
 
 describe('Vite Plugin (quotaGuardPlugin)', () => {
@@ -13,7 +13,8 @@ describe('Vite Plugin (quotaGuardPlugin)', () => {
 
   describe('Lifecycle Hooks', () => {
     it('handles virtual module resolution', () => {
-      const plugin = quotaGuardPlugin() as any;
+      // @ts-expect-error - testing virtual methods
+      const plugin = quotaGuardPlugin();
       const resolved = plugin.resolveId('/@quota-guard/register');
       expect(resolved).toBe('/@quota-guard/register');
       
@@ -22,7 +23,8 @@ describe('Vite Plugin (quotaGuardPlugin)', () => {
     });
 
     it('loads the virtual module correctly', () => {
-      const plugin = quotaGuardPlugin() as any;
+      // @ts-expect-error - testing virtual methods
+      const plugin = quotaGuardPlugin();
       const content = plugin.load('/@quota-guard/register');
       expect(content).toContain('import "quota-guard/register"');
       
@@ -31,7 +33,8 @@ describe('Vite Plugin (quotaGuardPlugin)', () => {
     });
 
     it('injects script tag only in development (serve)', () => {
-      const plugin = quotaGuardPlugin() as any;
+      // @ts-expect-error - testing virtual methods
+      const plugin = quotaGuardPlugin();
       
       // Simulate PRODUCTION build
       plugin.configResolved({ command: 'build' });

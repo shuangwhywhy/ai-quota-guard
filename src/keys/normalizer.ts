@@ -1,3 +1,4 @@
+import { getConfig } from '../config';
 import { extractSemanticFields } from '../providers/registry';
 
 export type JSONValue = string | number | boolean | null | { [key: string]: JSONValue } | JSONValue[];
@@ -71,10 +72,25 @@ export const generateStableKey = async (
   url: string | URL, 
   method: string, 
   body?: string | unknown, 
-  strategy: 'intelligent' | 'exact' | ((u: string, m: string, b: unknown) => unknown) = 'intelligent'
+  strategy: 'intelligent' | 'exact' | ((u: string, m: string, b: unknown) => unknown) = 'intelligent',
+  headers?: Record<string, string>
 ): Promise<string | null> => {
   const urlStr = url.toString();
   let normalizedBody = '';
+  let extraContext = '';
+  
+  const config = getConfig();
+  const keyHeaders = config.keyHeaders || [];
+  if (headers && keyHeaders.length > 0) {
+    const contextObj: Record<string, string> = {};
+    for (const h of keyHeaders) {
+      const val = headers[h] || headers[h.toLowerCase()];
+      if (val) contextObj[h] = val;
+    }
+    if (Object.keys(contextObj).length > 0) {
+      extraContext = JSON.stringify(deepSortKeys(contextObj));
+    }
+  }
 
   if (body) {
     let parsedBody: unknown = null;
@@ -102,7 +118,7 @@ export const generateStableKey = async (
     }
   }
 
-  const rawString = `${method}:${urlStr}:${normalizedBody}`;
+  const rawString = `${method}:${urlStr}:${normalizedBody}:${extraContext}`;
   return await sha256Hash(rawString);
 };
 

@@ -3,7 +3,12 @@ import { hookAxios } from '../src/axios';
 import { setConfig } from '../src/config';
 
 describe('Axios Interceptor Hook', () => {
-  let mockAxios: any;
+  let mockAxios: {
+    interceptors: { 
+      request: { use: ReturnType<typeof vi.fn> } 
+    };
+    VERSION?: string;
+  };
 
   beforeEach(() => {
     mockAxios = {
@@ -33,7 +38,7 @@ describe('Axios Interceptor Hook', () => {
     hookAxios(mockAxios);
     const interceptorFn = mockAxios.interceptors.request.use.mock.calls[0][0];
 
-    const config: any = { url: 'https://api.openai.com/v1/chat/completions' };
+    const config: Record<string, unknown> = { url: 'https://api.openai.com/v1/chat/completions' };
     const modifiedConfig = interceptorFn(config);
 
     expect(modifiedConfig.adapter).toBe('fetch');
@@ -43,7 +48,7 @@ describe('Axios Interceptor Hook', () => {
     hookAxios(mockAxios);
     const interceptorFn = mockAxios.interceptors.request.use.mock.calls[0][0];
 
-    const config: any = { url: 'https://api.anthropic.com/v1/messages' };
+    const config: Record<string, unknown> = { url: 'https://api.anthropic.com/v1/messages' };
     const modifiedConfig = interceptorFn(config);
 
     expect(modifiedConfig.adapter).toBe('fetch');
@@ -53,7 +58,7 @@ describe('Axios Interceptor Hook', () => {
     hookAxios(mockAxios);
     const interceptorFn = mockAxios.interceptors.request.use.mock.calls[0][0];
 
-    const config: any = { url: 'https://api.deepseek.com/chat/completions' };
+    const config: Record<string, unknown> = { url: 'https://api.deepseek.com/chat/completions' };
     const modifiedConfig = interceptorFn(config);
 
     expect(modifiedConfig.adapter).toBe('fetch');
@@ -63,7 +68,7 @@ describe('Axios Interceptor Hook', () => {
     hookAxios(mockAxios);
     const interceptorFn = mockAxios.interceptors.request.use.mock.calls[0][0];
 
-    const config: any = { url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent' };
+    const config: Record<string, unknown> = { url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent' };
     const modifiedConfig = interceptorFn(config);
 
     expect(modifiedConfig.adapter).toBe('fetch');
@@ -73,7 +78,7 @@ describe('Axios Interceptor Hook', () => {
     hookAxios(mockAxios);
     const interceptorFn = mockAxios.interceptors.request.use.mock.calls[0][0];
 
-    const config: any = { url: 'https://api.cohere.ai/v1/chat' };
+    const config: Record<string, unknown> = { url: 'https://api.cohere.ai/v1/chat' };
     const modifiedConfig = interceptorFn(config);
 
     expect(modifiedConfig.adapter).toBe('fetch');
@@ -83,7 +88,7 @@ describe('Axios Interceptor Hook', () => {
     hookAxios(mockAxios);
     const interceptorFn = mockAxios.interceptors.request.use.mock.calls[0][0];
 
-    const config: any = { url: 'https://api.mistral.ai/v1/chat/completions' };
+    const config: Record<string, unknown> = { url: 'https://api.mistral.ai/v1/chat/completions' };
     const modifiedConfig = interceptorFn(config);
 
     expect(modifiedConfig.adapter).toBe('fetch');
@@ -93,7 +98,7 @@ describe('Axios Interceptor Hook', () => {
     hookAxios(mockAxios);
     const interceptorFn = mockAxios.interceptors.request.use.mock.calls[0][0];
 
-    const config: any = { baseURL: 'https://api.openai.com', url: '/v1/chat/completions' };
+    const config: Record<string, unknown> = { baseURL: 'https://api.openai.com', url: '/v1/chat/completions' };
     const modifiedConfig = interceptorFn(config);
 
     expect(modifiedConfig.adapter).toBe('fetch');
@@ -103,7 +108,7 @@ describe('Axios Interceptor Hook', () => {
     hookAxios(mockAxios);
     const interceptorFn = mockAxios.interceptors.request.use.mock.calls[0][0];
 
-    const config: any = { url: 'https://api.google.com/search' };
+    const config: Record<string, unknown> = { url: 'https://api.google.com/search' };
     const modifiedConfig = interceptorFn(config);
 
     expect(modifiedConfig.adapter).toBeUndefined(); // Unchanged
@@ -116,7 +121,7 @@ describe('Axios Interceptor Hook', () => {
     const interceptorFn = mockAxios.interceptors.request.use.mock.calls[0][0];
 
     // Even if it targets openai, the system is globally disabled
-    const config: any = { url: 'https://api.openai.com/v1/chat' };
+    const config: Record<string, unknown> = { url: 'https://api.openai.com/v1/chat' };
     const modifiedConfig = interceptorFn(config);
 
     expect(modifiedConfig.adapter).toBeUndefined();
@@ -129,7 +134,7 @@ describe('Axios Interceptor Hook', () => {
     hookAxios(mockAxios);
     const interceptorFn = mockAxios.interceptors.request.use.mock.calls[0][0];
 
-    const config: any = { url: 'https://api.openai.com/v1/chat' };
+    const config: Record<string, unknown> = { url: 'https://api.openai.com/v1/chat' };
     const result = interceptorFn(config);
 
     expect(result.adapter).toBeUndefined();
@@ -144,7 +149,7 @@ describe('Axios Interceptor Hook', () => {
     hookAxios(mockAxios);
     const interceptorFn = mockAxios.interceptors.request.use.mock.calls[0][0];
 
-    const config: any = { url: 'https://api.openai.com/v1/chat' };
+    const config: Record<string, unknown> = { url: 'https://api.openai.com/v1/chat' };
     const result = interceptorFn(config);
 
     expect(result.adapter).toBeUndefined();
@@ -157,7 +162,7 @@ describe('Axios Interceptor Hook', () => {
     hookAxios(mockAxios);
     const interceptorFn = mockAxios.interceptors.request.use.mock.calls[0][0];
 
-    const config: any = { url: 'https://api.openai.com/v1/chat' };
+    const config: Record<string, unknown> = { url: 'https://api.openai.com/v1/chat' };
     const result = interceptorFn(config);
 
     expect(result.adapter).toBe('fetch');
@@ -168,7 +173,7 @@ describe('Axios Interceptor Hook', () => {
     hookAxios(mockAxios);
     const interceptorFn = mockAxios.interceptors.request.use.mock.calls[0][0];
 
-    const config: any = { url: 'https://api.openai.com/v1/chat' };
+    const config: Record<string, unknown> = { url: 'https://api.openai.com/v1/chat' };
     const result = interceptorFn(config);
 
     expect(result.adapter).toBe('fetch');
@@ -179,7 +184,7 @@ describe('Axios Interceptor Hook', () => {
     hookAxios(mockAxios);
     const interceptorFn = mockAxios.interceptors.request.use.mock.calls[0][0];
 
-    const config: any = { url: 'https://api.openai.com/v1/chat' };
+    const config: Record<string, unknown> = { url: 'https://api.openai.com/v1/chat' };
     const result = interceptorFn(config);
 
     expect(result.adapter).toBe('fetch');
@@ -189,7 +194,7 @@ describe('Axios Interceptor Hook', () => {
     hookAxios(mockAxios);
     const interceptorFn = mockAxios.interceptors.request.use.mock.calls[0][0];
 
-    const config: any = {};
+    const config: Record<string, unknown> = {};
     const result = interceptorFn(config);
 
     expect(result.adapter).toBeUndefined();

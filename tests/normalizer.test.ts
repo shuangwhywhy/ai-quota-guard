@@ -169,7 +169,7 @@ describe('Key Normalizer (Edge Cases)', () => {
   });
 
   it('accepts a custom key strategy function', async () => {
-    const customStrategy = (url: string, method: string, body: any) => {
+    const customStrategy = (url: string, method: string, body: Record<string, unknown>) => {
       // Only use the model field
       return { model: body?.model };
     };

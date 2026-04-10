@@ -28,7 +28,6 @@ describe('XMLHttpRequest Interception', () => {
     });
 
     it('should intercept XMLHttpRequest and redirect to handleRequest (Cache Hit)', async () => {
-        const responseData = { choices: [{ message: { content: 'Hello from cache' } }] };
         const body = JSON.stringify({ model: 'gpt-4', messages: [] });
         
         // Pre-warm the cache to avoid any network calls

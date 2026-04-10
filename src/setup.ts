@@ -13,5 +13,6 @@ export const injectQuotaGuard = (config?: Partial<QuotaGuardConfig>) => {
   }
 
   hookFetch();
+  // eslint-disable-next-line no-console
   console.log('[Quota Guard] Active.');
 };

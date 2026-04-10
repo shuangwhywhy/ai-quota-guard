@@ -33,7 +33,9 @@ describe('MemoryCache', () => {
   it('skips sweep when opCount is below threshold', async () => {
     // Threshold is 50. 
     await cache.set('test', { responsePayloadBase64: 'd', headers: {}, status: 200, timestamp: Date.now() });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((cache as any).opCount).toBe(1);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((cache as any).opCount).toBeLessThan(50);
   });
 

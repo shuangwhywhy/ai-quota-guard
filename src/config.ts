@@ -1,5 +1,15 @@
 import type { ICacheAdapter } from './cache/memory';
 
+export interface QuotaGuardRule {
+  /** Matcher for the request. If it matches, the overrides are applied. */
+  match: {
+    url?: string | RegExp;
+    headers?: Record<string, string | RegExp>;
+  };
+  /** Behavioral overrides for matching requests */
+  override: Partial<Omit<QuotaGuardConfig, 'rules' | 'aiEndpoints'>>;
+}
+
 export interface QuotaGuardConfig {
   /** If false, Quota Guard transparently passes everything through. Default: true in dev, false in prod */
   enabled: boolean;
@@ -21,6 +31,12 @@ export interface QuotaGuardConfig {
   auditHandler?: (event: AuditEvent) => void;
   /** Optional external cache store adapter (e.g., Redis, FileSystem) */
   cacheAdapter?: ICacheAdapter;
+  /** Specific behavioral rules for targeting subsets of requests */
+  rules?: QuotaGuardRule[];
+  /** Headers to include in the fingerprint hash generation. */
+  keyHeaders?: string[];
+  /** Headers that, if present, trigger a cache bypass (Safety Guards still apply). */
+  bypassCacheHeaders?: string[];
 }
 
 
@@ -52,6 +68,9 @@ export const getDefaultConfig = (): QuotaGuardConfig => {
     debounceMs: 300,
     cacheKeyStrategy: 'intelligent',
     intelligentFields: ['model', 'messages', 'prompt', 'system', 'contents', 'message'],
+    rules: [],
+    keyHeaders: [],
+    bypassCacheHeaders: ['cache-control', 'pragma'],
   };
 };
 

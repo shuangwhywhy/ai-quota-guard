@@ -48,7 +48,7 @@ describe('Interceptor Edge Cases', () => {
         status: 200,
         ok: true,
         headers: new Headers(),
-    } as any);
+    } as unknown as Response);
     
     const intercepted = createFetchInterceptor(mockFetch);
     const res = await intercepted('https://api.openai.com/v1/completions', {
