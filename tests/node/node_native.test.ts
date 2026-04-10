@@ -3,53 +3,81 @@ import http from 'http';
 import { hookFetch, unhookFetch } from '../../src/core/interceptor';
 import { setConfig } from '../../src/config';
 
-describe('Node.js Native Injection', () => {
-  const originalProcess = globalThis.process;
-
+describe('Node.js Native Interception (Pure Node)', () => {
   beforeEach(() => {
-    // Force Node environment for interceptor detection
-    Object.defineProperty(globalThis, 'process', {
-      value: { ...originalProcess, versions: { node: '20.0.0' } },
-      configurable: true
-    });
-
+    // Setup pure Node environment settings
     setConfig({
       enabled: true,
-      aiEndpoints: ['localhost'],
+      aiEndpoints: ['api.openai.com'],
       cacheTtlMs: 1000,
+      debounceMs: 0
     });
-    
+
+    // Mock the global fetch which handleRequest uses internally
+    globalThis.fetch = vi.fn().mockImplementation(async () => {
+      return new Response(JSON.stringify({ node: 'native-success' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    });
+
     unhookFetch();
     hookFetch();
   });
 
   afterEach(() => {
     unhookFetch();
-    Object.defineProperty(globalThis, 'process', { value: originalProcess, configurable: true });
     vi.restoreAllMocks();
   });
 
-  it('should be able to initialize BatchInterceptor with ClientRequestInterceptor', () => {
-    // This mostly verifies the synchronous injection fix doesn't crash 
-    // and correctly identifies Node.
-    expect(() => hookFetch()).not.toThrow();
+  it('successfully intercepts http.request and returns mocked data', async () => {
+    const postData = JSON.stringify({ model: 'gpt-4', messages: [] });
+    
+    const options = {
+      hostname: 'api.openai.com',
+      path: '/v1/chat/completions',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(postData)
+      }
+    };
+
+    const responsePromise = new Promise<{ status: number, body: string }>((resolve, reject) => {
+      const req = http.request(options, (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => {
+          resolve({ status: res.statusCode || 0, body: data });
+        });
+      });
+
+      req.on('error', (e) => reject(e));
+      req.write(postData);
+      req.end();
+    });
+
+    const result = await responsePromise;
+    expect(result.status).toBe(200);
+    expect(JSON.parse(result.body).node).toBe('native-success');
+    
+    // Verify that our internal fetch was called (proving interception)
+    expect(globalThis.fetch).toHaveBeenCalled();
   });
 
-  it('should intercept http.request without falling through to network if matched', async () => {
-    // In this environment, we can't easily verify the interceptor "caught" it 
-    // without a mock backend, but we can verify that Calling it doesn't 
-    // immediately explode if the injection is correct.
-    
-    // We use a high port to avoid EPERM on some systems, 
-    // even though we hope it's intercepted.
-    const req = http.request({
-      hostname: 'localhost',
-      port: 12345,
-      path: '/api/ai',
-      method: 'POST'
-    });
-    
-    expect(req).toBeDefined();
-    req.abort(); // Cleanup
+  it('bypasses non-AI endpoints in native Node mode', async () => {
+    const options = {
+      hostname: 'google.com',
+      path: '/',
+      method: 'GET'
+    };
+
+    // This should attempt a real network connection or fail if offline,
+    // but crucially, it shouldn't hit our mock fetch.
+    const req = http.request(options);
+    req.on('error', () => { /* ignore connection errors in air-gapped env */ });
+    req.abort();
+
+    expect(globalThis.fetch).not.toHaveBeenCalled();
   });
 });
