@@ -74,7 +74,7 @@ describe('Quota Guard Edge Cases & Branch Coverage', () => {
       const failingFetch = vi.fn().mockRejectedValue(new Error('Network error'));
       const localGuarded = createFetchInterceptor(failingFetch);
       
-      await expect(localGuarded('https://api.openai.com/v1/chat')).rejects.toThrow('Network error');
+      await expect(localGuarded('https://api.openai.com/v1/chat-unique-error')).rejects.toThrow('Network error');
     });
 
     it('gracefully handles background task failure without crashing main request', async () => {

@@ -63,58 +63,51 @@ export default defineConfig({
 });
 ```
 
-### 4. Native SDK Support
+### 4. Axios Support
 
-Since Quota Guard operates on `globalThis.fetch` and Node.js `http`/`https` (via `@mswjs/interceptors`), you can continue using standard libraries untouched:
+For Axios users, especially in projects where you want a safe, non-intrusive integration, we provide a dedicated hook that enforces the `fetch` adapter:
 
 ```typescript
-// Any file in your app! No need to import quota-guard here.
-import { OpenAI } from 'openai';
+import axios from 'axios';
+import { hookAxios } from 'quota-guard/axios';
 
-const openai = new OpenAI();
-const result = await openai.chat.completions.create({
-  model: 'gpt-4',
-  messages: [{ role: 'user', content: 'Say hello!' }] // In dev mode, the second identical call is free & instant!
-});
+const myAxios = axios.create();
+hookAxios(myAxios); // Now this instance is guarded!
 ```
 
-## Supported AI Providers (Auto-detected)
-- `api.openai.com`
-- `api.anthropic.com`
-- `api.deepseek.com`
-- `generativelanguage.googleapis.com` (Gemini)
-- `api.cohere.ai`
-- `api.mistral.ai`
+### 5. Native SDK Support
+...
+```
 
 ## Advanced Configuration
-If you want to manually configure endpoints, cache TTL, or attach an audit logger, you can initialize Quota Guard explicitly at the top of your `main.ts`:
-
+...
 ```typescript
-import { injectQuotaGuard } from 'quota-guard';
-
 injectQuotaGuard({
   enabled: process.env.NODE_ENV === 'development',
   cacheTtlMs: 1000 * 60 * 60, // 1 hour
   debounceMs: 300,             // 300ms debounce window (default)
   breakerMaxFailures: 3,
   cacheKeyStrategy: 'intelligent', // or 'exact', or a custom function
-  aiEndpoints: ['api.my-custom-llm.com'],
+  intelligentFields: ['model', 'messages', 'prompt'], // Customize intelligent hashing
+  aiEndpoints: [/api\.my-custom-llm\.com/, 'other-provider.com'], // Supports String or RegExp
   auditHandler: (event) => console.log('Quota Guard Event:', event.type, event.key)
 });
 ```
 
-### Cache Key Strategies
+### Audit Event Types
 
-| Strategy       | Description                                                                 |
-|----------------|-----------------------------------------------------------------------------|
-| `'intelligent'`| **(Default)** Extracts only semantic fields (`model`, `messages`, `prompt`, `system`, `contents`, `message`) for hashing. Ignores noise like `temperature`, `stream`, `metadata`. |
-| `'exact'`      | Hashes the full request body as-is. Lower cache hit rate but precise.       |
-| `(url, method, body) => ...` | Custom function returning the object to hash. Full control. |
+| Event Type | Description |
+| :--- | :--- |
+| `request_started` | Interceptor caught a new request. |
+| `cache_hit` | Returned a previously cached response. |
+| `live_called` | No cache/dedup found, calling native network. |
+| `in_flight_shared` | Multiple calls detected; joined an existing live stream. |
+| `breaker_opened` | Circuit breaker active for this key; request blocked. |
+| `request_failed` | Native request returned non-OK status. |
 
 ## How It Works
-- **Keys**: Hashes `METHOD` + `URL` + `BODY` (filtered by configurable cache key strategy).
-- **Network Coverage**: Intercepts both `fetch` and Node.js `http`/`https` via `@mswjs/interceptors` in Node.js environments. Falls back to pure `fetch` proxy in browsers.
-- **Response Handling**: The native response buffer is sliced securely so multiple cloned requests inside your framework all think they received a dedicated stream.
-- **Debounce**: Groups identical rapid-fire requests within a configurable time window (default 300ms) and merges them into a single network call. All callers receive the same response — no `AbortError` thrown.
-- **Fail-safe**: If it crashes, it falls back to native transparent `fetch`/`http`.
-- **Memory Management**: Stale cache entries are automatically swept via a passive garbage collector triggered after every N operations, preventing memory leaks without background timers.
+- **Network Coverage**: Powered by `@mswjs/interceptors`. It covers `fetch`, `XMLHttpRequest`, and Node.js `http`/`https` modules natively across both Node and Browser environments.
+- **Real-time Streaming**: Uses a custom `ResponseBroadcaster` to "tee" live AI streams. Even if multiple requests are deduplicated, every caller receives the stream chunks simultaneously in real-time.
+- **Provider Intelligence**: Auto-detects major AI providers (OpenAI, Anthropic, Gemini, DeepSeek) to extract exact semantic fields for hashing, ensuring `temperature` or `stream: true` flags don't break your cache.
+...
+

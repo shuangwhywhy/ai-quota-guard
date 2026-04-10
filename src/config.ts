@@ -3,7 +3,7 @@ import type { ICacheAdapter } from './cache/memory';
 export interface QuotaGuardConfig {
   /** If false, Quota Guard transparently passes everything through. Default: true in dev, false in prod */
   enabled: boolean;
-  /** List of hostnames to intercept natively. Default: OpenAI, Anthropic, DeepSeek, Google */
+  /** List of hostnames (strings or regex strings like "/.../") to intercept natively. */
   aiEndpoints: string[];
   /** Debug cache TTL in milliseconds. Default: 3600000 (1 hour) */
   cacheTtlMs: number;
@@ -15,11 +15,14 @@ export interface QuotaGuardConfig {
   debounceMs: number;
   /** Strategy for generating the cache/debounce key. 'intelligent' strips noise like temperature. Default: 'intelligent' */
   cacheKeyStrategy?: 'intelligent' | 'exact' | ((url: string, method: string, body: any) => any);
+  /** Custom fields to extract in 'intelligent' mode if provider is not auto-detected. */
+  intelligentFields?: string[];
   /** Custom audit logger */
   auditHandler?: (event: AuditEvent) => void;
   /** Optional external cache store adapter (e.g., Redis, FileSystem) */
   cacheAdapter?: ICacheAdapter;
 }
+
 
 export interface AuditEvent {
   type: 'request_started' | 'cache_hit' | 'live_called' | 'in_flight_shared' | 'debounced' | 'breaker_opened' | 'request_failed' | 'request_aborted' | 'pass_through';
@@ -48,8 +51,10 @@ export const getDefaultConfig = (): QuotaGuardConfig => {
     breakerResetTimeoutMs: 30000,
     debounceMs: 300,
     cacheKeyStrategy: 'intelligent',
+    intelligentFields: ['model', 'messages', 'prompt', 'system', 'contents', 'message'],
   };
 };
+
 
 let activeConfig: QuotaGuardConfig = getDefaultConfig();
 

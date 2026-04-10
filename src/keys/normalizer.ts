@@ -1,3 +1,5 @@
+import { extractSemanticFields } from '../providers/registry';
+
 function simpleFnv1a(str: string): string {
   // Graceful fallback if native Crypto is somehow ripped out
   let h1 = 0x811c9dc5;
@@ -23,7 +25,7 @@ async function sha256Hash(str: string): Promise<string> {
     return bufferToHex(hashBuffer);
   }
 
-  // Node.js fallback (lazy import prevents Vite from eagerly bundling it if it's dead code in browser)
+  // Node.js fallback
   if (typeof process !== 'undefined' && process.release?.name === 'node') {
     try {
       const m = 'crypto';
@@ -60,22 +62,13 @@ export function deepSortKeys(obj: any): any {
 
 export const INTELLIGENT_KEY_FIELDS = ['model', 'messages', 'prompt', 'system', 'contents', 'message'];
 
-function filterIntelligentBody(obj: any): any {
-  if (!isPlainObject(obj)) return obj;
-  const filtered: any = {};
-  for (const key of INTELLIGENT_KEY_FIELDS) {
-    if (obj[key] !== undefined) {
-      filtered[key] = obj[key];
-    }
-  }
-  if (Object.keys(filtered).length === 0) return obj;
-  return filtered;
-}
-
-export const generateStableKey = async (url: string | URL, method: string, body?: any, strategy: 'intelligent' | 'exact' | ((u: string, m: string, b: any) => any) = 'intelligent'): Promise<string | null> => {
+export const generateStableKey = async (
+  url: string | URL, 
+  method: string, 
+  body?: any, 
+  strategy: 'intelligent' | 'exact' | ((u: string, m: string, b: any) => any) = 'intelligent'
+): Promise<string | null> => {
   const urlStr = url.toString();
-
-  // We only track POST/PUT for LLMs typically, but let's allow GET if it has query params
   let normalizedBody = '';
 
   if (body) {
@@ -83,8 +76,8 @@ export const generateStableKey = async (url: string | URL, method: string, body?
     if (typeof body === 'string') {
       try {
         parsedBody = JSON.parse(body);
-      } catch (e) {
-        parsedBody = body; // fallback
+      } catch {
+        parsedBody = body;
       }
     } else {
       parsedBody = body;
@@ -93,7 +86,8 @@ export const generateStableKey = async (url: string | URL, method: string, body?
     if (typeof strategy === 'function') {
       parsedBody = strategy(urlStr, method, parsedBody);
     } else if (strategy === 'intelligent') {
-      parsedBody = filterIntelligentBody(parsedBody);
+      // Use the new provider-aware registry
+      parsedBody = extractSemanticFields(urlStr, parsedBody);
     }
 
     if (isPlainObject(parsedBody) || Array.isArray(parsedBody)) {
@@ -106,3 +100,4 @@ export const generateStableKey = async (url: string | URL, method: string, body?
   const rawString = `${method}:${urlStr}:${normalizedBody}`;
   return await sha256Hash(rawString);
 };
+

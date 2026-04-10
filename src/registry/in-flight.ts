@@ -1,11 +1,13 @@
-export class InFlightRegistry {
-  private inFlight = new Map<string, Promise<any>>();
+import type { ResponseBroadcaster } from '../streams/broadcaster';
 
-  set(key: string, promise: Promise<any>): void {
-    this.inFlight.set(key, promise);
+export class InFlightRegistry {
+  private inFlight = new Map<string, ResponseBroadcaster | Promise<ResponseBroadcaster>>();
+
+  set(key: string, value: ResponseBroadcaster | Promise<ResponseBroadcaster>): void {
+    this.inFlight.set(key, value);
   }
 
-  get(key: string): Promise<any> | undefined {
+  get(key: string): ResponseBroadcaster | Promise<ResponseBroadcaster> | undefined {
     return this.inFlight.get(key);
   }
 
@@ -19,3 +21,5 @@ export class InFlightRegistry {
 }
 
 export const globalInFlightRegistry = new InFlightRegistry();
+
+
