@@ -33,11 +33,11 @@ jobs:
 
       - name: Publish to NPM
         run: npm publish --access public --provenance
-        # NPM Trusted Publishing automatically detects the OIDC token from the environment
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish to GitHub Packages
         run: |
+          npm config set //npm.pkg.github.com/:_authToken ${{ secrets.GITHUB_TOKEN }}
           npm config set @shuangwhywhy:registry https://npm.pkg.github.com/
           npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
