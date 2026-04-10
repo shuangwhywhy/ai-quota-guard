@@ -3,7 +3,7 @@ import { getConfig } from '../config';
 export interface ProviderRule {
   name: string;
   hostnameMatch: string | RegExp;
-  extractSemanticFields: (body: any) => any;
+  extractSemanticFields: (body: Record<string, unknown>) => Record<string, unknown>;
 }
 
 export const PROVIDER_RULES: ProviderRule[] = [
@@ -11,26 +11,26 @@ export const PROVIDER_RULES: ProviderRule[] = [
     name: 'openai',
     hostnameMatch: /api\.openai\.com/,
     extractSemanticFields: (body) => ({
-      model: body.model,
-      messages: body.messages,
-      prompt: body.prompt
+      model: body.model as unknown as string,
+      messages: body.messages as unknown as unknown[],
+      prompt: body.prompt as unknown as string
     })
   },
   {
     name: 'anthropic',
     hostnameMatch: /api\.anthropic\.com/,
     extractSemanticFields: (body) => ({
-      model: body.model,
-      messages: body.messages,
-      system: body.system
+      model: body.model as unknown as string,
+      messages: body.messages as unknown as unknown[],
+      system: body.system as unknown as string
     })
   },
   {
     name: 'gemini',
     hostnameMatch: /generativelanguage\.googleapis\.com/,
     extractSemanticFields: (body) => ({
-      model: body.model,
-      contents: body.contents
+      model: body.model as unknown as string,
+      contents: body.contents as unknown as unknown[]
     })
   },
 
@@ -38,8 +38,8 @@ export const PROVIDER_RULES: ProviderRule[] = [
     name: 'deepseek',
     hostnameMatch: /api\.deepseek\.com/,
     extractSemanticFields: (body) => ({
-      model: body.model,
-      messages: body.messages
+      model: body.model as unknown as string,
+      messages: body.messages as unknown as unknown[]
     })
   }
 ];
@@ -47,9 +47,10 @@ export const PROVIDER_RULES: ProviderRule[] = [
 /**
  * Matches a URL to a provider and extracts only the relevant fields for hashing.
  */
-export function extractSemanticFields(urlStr: string, body: any): any {
+export function extractSemanticFields(urlStr: string, body: unknown): unknown {
   if (typeof body !== 'object' || body === null) return body;
 
+  const bodyRecord = body as Record<string, unknown>;
   const config = getConfig();
   const genericFields = config.intelligentFields || ['model', 'messages', 'prompt', 'system', 'contents', 'message'];
   
@@ -67,18 +68,18 @@ export function extractSemanticFields(urlStr: string, body: any): any {
     }
   });
 
-  const result: any = {};
+  const result: Record<string, unknown> = {};
   
   // 1. Extract provider-specific fields if matched
   if (rule) {
-    const fields = rule.extractSemanticFields(body);
+    const fields = rule.extractSemanticFields(bodyRecord);
     Object.assign(result, fields);
   }
 
   // 2. Supplement with generic fields from config (user's custom fields)
   for (const f of genericFields) {
-    if (body[f] !== undefined) {
-      result[f] = body[f];
+    if (bodyRecord[f] !== undefined) {
+      result[f] = bodyRecord[f];
     }
   }
 

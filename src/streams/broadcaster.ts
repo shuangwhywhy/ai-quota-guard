@@ -40,25 +40,24 @@ export class ResponseBroadcaster {
       });
     }
 
-    const self = this;
     let currentController: ReadableStreamDefaultController;
     const stream = new ReadableStream({
-      start(controller) {
+      start: (controller) => {
         currentController = controller;
         // Send all chunks we've already collected to catch up the late subscriber
-        for (const chunk of self.bufferedChunks) {
+        for (const chunk of this.bufferedChunks) {
           controller.enqueue(chunk);
         }
 
-        if (self.isFinished) {
+        if (this.isFinished) {
           controller.close();
         } else {
-          self.controllers.add(controller);
+          this.controllers.add(controller);
         }
       },
-      cancel() {
+      cancel: () => {
         if (currentController) {
-          self.controllers.delete(currentController);
+          this.controllers.delete(currentController);
         }
       }
     });

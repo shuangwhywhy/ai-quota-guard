@@ -9,19 +9,25 @@ import { getConfig } from './config';
  * 
  * @param axiosInstance - The Axios instance (e.g., `import axios from 'axios'`)
  */
-export const hookAxios = (axiosInstance: any) => {
-  if (!axiosInstance || !axiosInstance.interceptors) {
+export const hookAxios = (axiosInstance: unknown) => {
+  if (!axiosInstance || typeof axiosInstance !== 'object' || !('interceptors' in axiosInstance)) {
+    // eslint-disable-next-line no-console
     console.warn('[Quota Guard] Invalid Axios instance provided.');
     return;
   }
+
+  const instance = axiosInstance as { 
+    interceptors: { request: { use: (fn: (c: Record<string, unknown>) => Record<string, unknown>) => void } };
+    VERSION?: string;
+  };
   
-  axiosInstance.interceptors.request.use((config: any) => {
+  instance.interceptors.request.use((config) => {
     const guardConfig = getConfig();
     if (!guardConfig.enabled) return config;
 
     // Resolve effective URL
-    const urlStr = config.url || '';
-    const baseURLStr = config.baseURL || '';
+    const urlStr = (config.url as string) || '';
+    const baseURLStr = (config.baseURL as string) || '';
     const fullPath = urlStr.startsWith('http') ? urlStr : baseURLStr + urlStr;
     
     const isAI = guardConfig.aiEndpoints.some((ep: string) => fullPath.includes(ep));
@@ -29,11 +35,16 @@ export const hookAxios = (axiosInstance: any) => {
     if (isAI) {
       // Force Axios to utilize the `fetch` adapter.
       // Requires Axios >= 1.7.0.
-      if (axiosInstance.VERSION) {
-        const [major, minor] = axiosInstance.VERSION.split('.').map(Number);
-        if (major < 1 || (major === 1 && minor < 7)) {
-          console.warn(`[Quota Guard] Axios version ${axiosInstance.VERSION} lacks native fetch adapter support. Guard disabled for this instance.`);
-          return config;
+      if (instance.VERSION) {
+        const versionMatch = instance.VERSION.match(/^(\d+)\.(\d+)/);
+        if (versionMatch) {
+          const major = parseInt(versionMatch[1], 10);
+          const minor = parseInt(versionMatch[2], 10);
+          if (major < 1 || (major === 1 && minor < 7)) {
+            // eslint-disable-next-line no-console
+            console.warn(`[Quota Guard] Axios version ${instance.VERSION} lacks native fetch adapter support. Guard disabled for this instance.`);
+            return config;
+          }
         }
       }
       config.adapter = 'fetch';
@@ -42,5 +53,6 @@ export const hookAxios = (axiosInstance: any) => {
     return config;
   });
 
+  // eslint-disable-next-line no-console
   console.log('[Quota Guard] Axios interceptor active.');
 };

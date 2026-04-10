@@ -26,11 +26,13 @@ export class InFlightRegistry {
 
 const GLOBAL_KEY = '__QUOTA_GUARD_IN_FLIGHT_REGISTRY__';
 
+const globalRegistry = globalThis as unknown as Record<string, InFlightRegistry>;
+
 // Use a truly global instance to survive multiple library loads in browser/node
-if (!(globalThis as any)[GLOBAL_KEY]) {
-  (globalThis as any)[GLOBAL_KEY] = new InFlightRegistry();
+if (!globalRegistry[GLOBAL_KEY]) {
+  globalRegistry[GLOBAL_KEY] = new InFlightRegistry();
 }
 
-export const globalInFlightRegistry = (globalThis as any)[GLOBAL_KEY] as InFlightRegistry;
+export const globalInFlightRegistry = globalRegistry[GLOBAL_KEY];
 
 

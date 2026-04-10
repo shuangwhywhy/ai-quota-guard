@@ -23,7 +23,7 @@ window.fetch = function(...args) {
     return originalNativeFetch.apply(this, args);
 }
 
-// @ts-ignore - Setting global config
+// @ts-expect-error - ignore type mismatch - Setting global config
 window.__QUOTA_GUARD_CONFIG__ = {
     enabled: true,
     aiEndpoints: ['localhost', 'mock-ai'],

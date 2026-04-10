@@ -295,7 +295,7 @@ describe('Quota Guard Fetch Interceptor', () => {
     expect(nativeFetchMock).toHaveBeenCalledTimes(1);
     
     const capture = nativeFetchMock.mock.calls[0];
-    let interceptedBody = capture[1].body;
+    const interceptedBody = capture[1].body;
     expect(interceptedBody).toBe('same content');
   });
 

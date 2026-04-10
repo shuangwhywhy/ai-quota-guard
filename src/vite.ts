@@ -21,12 +21,14 @@ export interface VitePlugin {
   transformIndexHtml?: () => ViteIndexHtmlTag[] | void;
 }
 
+import type { QuotaGuardConfig } from './config';
+
 /**
  * Standard Vite Plugin for Quota Guard.
  * In development mode, it automatically injects the network interceptor
  * at the very beginning of the application lifecycle via transformIndexHtml.
  */
-export function quotaGuardPlugin(): VitePlugin {
+export function QuotaGuardPlugin(options: Partial<QuotaGuardConfig> = {}): VitePlugin {
   let isDev = false;
   const virtualModuleId = '/@quota-guard/register';
 
@@ -47,9 +49,13 @@ export function quotaGuardPlugin(): VitePlugin {
 
     load(id) {
       if (id === virtualModuleId) {
-        // This virtual module simply triggers the global hook.
+        // This virtual module triggers the global hook and applies user configuration.
         // It relies on the 'quota-guard' package being installed.
-        return `import "quota-guard/register";`;
+        return [
+          `import { setConfig } from "quota-guard";`,
+          `import "quota-guard/register";`,
+          `setConfig(${JSON.stringify(options)});`
+        ].join('\n');
       }
       return null;
     },
@@ -70,3 +76,8 @@ export function quotaGuardPlugin(): VitePlugin {
     }
   };
 }
+
+/**
+ * Alias for QuotaGuardPlugin to maintain camelCase naming convention if preferred.
+ */
+export const quotaGuardPlugin = QuotaGuardPlugin;

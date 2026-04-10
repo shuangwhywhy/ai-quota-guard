@@ -1,6 +1,6 @@
 import { getConfig, AuditEvent, QuotaGuardConfig } from '../config';
 import { generateStableKey } from '../keys/normalizer';
-import { globalCache, SerializedCacheEntry } from '../cache/memory';
+import { globalCache } from '../cache/memory';
 import { globalInFlightRegistry } from '../registry/in-flight';
 import { globalBreaker, CircuitBreakerError } from '../breaker/circuit-breaker';
 import { globalDebouncer } from '../utils/debounce-promise';

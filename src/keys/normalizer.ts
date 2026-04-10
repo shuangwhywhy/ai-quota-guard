@@ -19,7 +19,6 @@ function bufferToHex(buffer: ArrayBuffer): string {
 
 async function sha256Hash(str: string): Promise<string> {
   // Web Browser / Bun / Deno / Node 19+ WebCrypto
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (typeof globalThis !== 'undefined' && globalThis.crypto && globalThis.crypto.subtle) {
     const enc = new TextEncoder();
     const data = enc.encode(str);
@@ -43,21 +42,25 @@ async function sha256Hash(str: string): Promise<string> {
   return simpleFnv1a(str);
 }
 
-function isPlainObject(value: unknown): value is Record<string, JSONValue> {
+function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value) && !(value instanceof Date) && !(value instanceof RegExp);
 }
 
-export function deepSortKeys(obj: JSONValue): JSONValue {
+/**
+ * Recursively sorts the keys of an object to ensure stable JSON stringification.
+ * Uses generics to maintain type information in tests and IDEs.
+ */
+export function deepSortKeys<T>(obj: T): T {
   if (Array.isArray(obj)) {
-    return (obj as JSONValue[]).map(deepSortKeys);
+    return (obj as unknown[]).map(item => deepSortKeys(item)) as unknown as T;
   }
   if (isPlainObject(obj)) {
-    const result: Record<string, JSONValue> = {};
+    const result: Record<string, unknown> = {};
     const sortedKeys = Object.keys(obj).sort();
     for (const key of sortedKeys) {
-      result[key] = deepSortKeys(obj[key]);
+      result[key] = deepSortKeys((obj as Record<string, unknown>)[key]);
     }
-    return result;
+    return result as unknown as T;
   }
   return obj;
 }
@@ -67,14 +70,14 @@ export const INTELLIGENT_KEY_FIELDS = ['model', 'messages', 'prompt', 'system', 
 export const generateStableKey = async (
   url: string | URL, 
   method: string, 
-  body?: string | JSONValue, 
-  strategy: 'intelligent' | 'exact' | ((u: string, m: string, b: JSONValue) => JSONValue) = 'intelligent'
+  body?: string | unknown, 
+  strategy: 'intelligent' | 'exact' | ((u: string, m: string, b: unknown) => unknown) = 'intelligent'
 ): Promise<string | null> => {
   const urlStr = url.toString();
   let normalizedBody = '';
 
   if (body) {
-    let parsedBody: JSONValue = null;
+    let parsedBody: unknown = null;
     if (typeof body === 'string') {
       try {
         parsedBody = JSON.parse(body);

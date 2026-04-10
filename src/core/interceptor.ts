@@ -1,9 +1,9 @@
 import { BatchInterceptor, HttpRequestEventMap, Interceptor } from '@mswjs/interceptors';
 import { FetchInterceptor } from '@mswjs/interceptors/fetch';
 import { XMLHttpRequestInterceptor } from '@mswjs/interceptors/XMLHttpRequest';
-import { getConfig, QuotaGuardConfig, AuditEvent } from '../config';
-import { globalCache, SerializedCacheEntry } from '../cache/memory';
-import { globalInFlightRegistry, globalInFlightRegistry as registry } from '../registry/in-flight';
+import { getConfig, type AuditEvent } from '../config';
+import { globalCache, type SerializedCacheEntry } from '../cache/memory';
+import { globalInFlightRegistry as registry } from '../registry/in-flight';
 import { globalBreaker, CircuitBreakerError } from '../breaker/circuit-breaker';
 import { GuardPipeline } from './pipeline';
 import { ResponseBroadcaster } from '../streams/broadcaster';
@@ -16,11 +16,10 @@ type ClientRequestInterceptorType = new () => Interceptor<HttpRequestEventMap>;
 let ClientRequestInterceptor: ClientRequestInterceptorType | null = null;
 const isNode = typeof process !== 'undefined' && process.versions && process.versions.node;
 if (isNode) {
-  try {
-    const m = '@mswjs/interceptors/ClientRequest';
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    ClientRequestInterceptor = require(m).ClientRequestInterceptor;
-  } catch { /* ignore */ }
+  const m = '@mswjs/interceptors/ClientRequest';
+  import(m).then((mod) => {
+    ClientRequestInterceptor = mod.ClientRequestInterceptor;
+  }).catch(() => { /* ignore */ });
 }
 
 let batchInterceptor: BatchInterceptor<Interceptor<HttpRequestEventMap>[]> | null = null;
@@ -160,6 +159,7 @@ export const hookFetch = () => {
   });
 
   batchInterceptor.apply();
+  // eslint-disable-next-line no-console
   console.log('[Quota Guard] Unified network guard active.');
 };
 

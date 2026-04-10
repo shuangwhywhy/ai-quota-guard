@@ -65,7 +65,7 @@ describe('Interceptor Edge Cases', () => {
   describe('Encoding Utilities Fallbacks', () => {
     it('bufferToBase64 uses btoa fallback when Buffer is missing', () => {
        const originalBuffer = globalThis.Buffer;
-       // @ts-ignore
+       // @ts-expect-error - ignore type mismatch
        globalThis.Buffer = undefined;
        
        try {

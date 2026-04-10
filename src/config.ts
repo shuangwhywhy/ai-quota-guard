@@ -14,7 +14,7 @@ export interface QuotaGuardConfig {
   /** Time in ms to delay requests and merge identical in-flight requests. 0 to disable. Default: 300 */
   debounceMs: number;
   /** Strategy for generating the cache/debounce key. 'intelligent' strips noise like temperature. Default: 'intelligent' */
-  cacheKeyStrategy?: 'intelligent' | 'exact' | ((url: string, method: string, body: any) => any);
+  cacheKeyStrategy?: 'intelligent' | 'exact' | ((url: string, method: string, body: unknown) => unknown);
   /** Custom fields to extract in 'intelligent' mode if provider is not auto-detected. */
   intelligentFields?: string[];
   /** Custom audit logger */
@@ -29,7 +29,7 @@ export interface AuditEvent {
   key: string;
   url: string;
   timestamp: number;
-  details?: any;
+  details?: unknown;
 }
 
 export const DEFAULT_AI_ENDPOINTS = [

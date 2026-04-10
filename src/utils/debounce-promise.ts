@@ -1,5 +1,5 @@
 interface DebounceGroup {
-  timeoutId: any;
+  timeoutId: ReturnType<typeof setTimeout> | null;
   queue: Array<() => void>;
 }
 
