@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createFetchInterceptor } from '../src/core/interceptor';
-import { setConfig } from '../src/config';
-import { globalCache } from '../src/cache/memory';
-import { globalInFlightRegistry } from '../src/registry/in-flight';
+import { createFetchInterceptor } from '../../src/core/interceptor';
+import { setConfig } from '../../src/config';
+import { globalCache } from '../../src/cache/memory';
+import { globalInFlightRegistry } from '../../src/registry/in-flight';
 
 /**
  * These tests exercise the core Quota Guard pipeline (createFetchInterceptor)

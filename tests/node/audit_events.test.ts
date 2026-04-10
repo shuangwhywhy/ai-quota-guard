@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createFetchInterceptor } from '../src/core/interceptor';
-import { setConfig } from '../src/config';
-import { globalCache } from '../src/cache/memory';
+import { createFetchInterceptor } from '../../src/core/interceptor';
+import { setConfig } from '../../src/config';
+import { globalCache } from '../../src/cache/memory';
 
 describe('Audit Event Coverage (Unit)', () => {
   let auditHandler: ReturnType<typeof vi.fn>;

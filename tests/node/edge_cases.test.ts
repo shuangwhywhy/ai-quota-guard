@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { deepSortKeys } from '../src/keys/normalizer';
-import { createFetchInterceptor } from '../src/core/interceptor';
-import { setConfig } from '../src/config';
-import { globalCache } from '../src/cache/memory';
-import { globalInFlightRegistry } from '../src/registry/in-flight';
+import { deepSortKeys } from '../../src/keys/normalizer';
+import { createFetchInterceptor } from '../../src/core/interceptor';
+import { setConfig } from '../../src/config';
+import { globalCache } from '../../src/cache/memory';
+import { globalInFlightRegistry } from '../../src/registry/in-flight';
 
 describe('Quota Guard Edge Cases & Branch Coverage', () => {
   let nativeFetchMock: ReturnType<typeof vi.fn>;

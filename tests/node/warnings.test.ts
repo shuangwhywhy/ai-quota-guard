@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { GuardPipeline } from '../src/core/pipeline';
-import { setConfig, getDefaultConfig } from '../src/config';
-import { globalInFlightRegistry } from '../src/registry/in-flight';
-import { globalCache } from '../src/cache/memory';
+import { GuardPipeline } from '../../src/core/pipeline';
+import { setConfig, getDefaultConfig } from '../../src/config';
+import { globalInFlightRegistry } from '../../src/registry/in-flight';
+import { globalCache } from '../../src/cache/memory';
 
 describe('Guard Engine - Diagnostics & Warnings', () => {
   let pipeline: GuardPipeline;

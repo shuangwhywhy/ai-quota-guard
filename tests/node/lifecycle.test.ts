@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { injectQuotaGuard } from '../src/setup';
-import * as interceptor from '../src/core/interceptor';
-import { getConfig } from '../src/config';
+import { injectQuotaGuard } from '../../src/setup';
+import * as interceptor from '../../src/core/interceptor';
+import { getConfig } from '../../src/config';
 
 describe('Setup & Lifecycle', () => {
   afterEach(() => {
@@ -35,7 +35,7 @@ describe('Setup & Lifecycle', () => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
     
     // Dynamically importing register should trigger injection
-    await import('../src/register');
+    await import('../../src/register');
     
     expect(hookSpy).toHaveBeenCalled();
   });

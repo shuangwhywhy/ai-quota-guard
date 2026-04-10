@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createFetchInterceptor } from '../src/core/interceptor';
-import { globalInFlightRegistry } from '../src/registry/in-flight';
-import { globalBreaker } from '../src/breaker/circuit-breaker';
-import { bufferToBase64 } from '../src/utils/encoding';
+import { createFetchInterceptor } from '../../src/core/interceptor';
+import { globalInFlightRegistry } from '../../src/registry/in-flight';
+import { globalBreaker } from '../../src/breaker/circuit-breaker';
+import { bufferToBase64 } from '../../src/utils/encoding';
 
 describe('Interceptor Edge Cases', () => {
   beforeEach(() => {

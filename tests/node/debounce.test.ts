@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { PromiseDebouncer } from '../src/utils/debounce-promise';
+import { PromiseDebouncer } from '../../src/utils/debounce-promise';
 
 describe('PromiseDebouncer', () => {
   let debouncer: PromiseDebouncer;

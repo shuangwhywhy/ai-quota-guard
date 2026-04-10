@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import * as QuotaGuard from '../src/index';
+import * as QuotaGuard from '../../src/index';
 import http from 'node:http';
 
 describe('Quota Guard Public API (index.ts)', () => {

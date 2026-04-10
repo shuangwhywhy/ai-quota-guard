@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { GuardPipeline } from '../src/core/pipeline';
-import { setConfig, getDefaultConfig } from '../src/config';
+import { GuardPipeline } from '../../src/core/pipeline';
+import { setConfig, getDefaultConfig } from '../../src/config';
 
 describe('Guard Engine - Rules & Overrides', () => {
   let pipeline: GuardPipeline;

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { getConfig, setConfig, getDefaultConfig, DEFAULT_AI_ENDPOINTS } from '../src/config';
+import { getConfig, setConfig, getDefaultConfig, DEFAULT_AI_ENDPOINTS } from '../../src/config';
 
 describe('Quota Guard Config Management', () => {
   afterEach(() => {

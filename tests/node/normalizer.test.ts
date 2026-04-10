@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { generateStableKey, deepSortKeys, INTELLIGENT_KEY_FIELDS } from '../src/keys/normalizer';
+import { generateStableKey, deepSortKeys, INTELLIGENT_KEY_FIELDS } from '../../src/keys/normalizer';
 
 describe('Key Normalizer (Crypto Branches)', () => {
   afterEach(() => {

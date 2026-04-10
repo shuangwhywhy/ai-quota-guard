@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { hookAxios } from '../src/axios';
-import { setConfig } from '../src/config';
+import { hookAxios } from '../../src/axios';
+import { setConfig } from '../../src/config';
 
 describe('Axios Interceptor Hook', () => {
   let mockAxios: {

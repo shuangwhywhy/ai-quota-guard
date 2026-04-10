@@ -1,12 +1,12 @@
-import { defineWorkspace } from 'vitest/config';
+import { defineWorkspace, defineConfig } from 'vitest/config';
 
 export default defineWorkspace([
   {
+    name: 'node',
     test: {
-      name: 'node',
-      environment: 'jsdom', // Keep jsdom for unit tests that need DOM matchers but not real browser
-      include: ['tests/**/*.{test,spec}.ts'],
-      exclude: ['tests/browser.test.ts', 'tests/browser_integration.test.ts'],
+      environment: 'jsdom',
+      globals: true,
+      include: ['tests/node/**/*.test.ts'],
       coverage: {
         provider: 'v8',
         include: ['src/**/*.ts']
@@ -14,15 +14,15 @@ export default defineWorkspace([
     }
   },
   {
+    name: 'browser',
     test: {
-      name: 'browser',
       browser: {
         enabled: true,
         name: 'chromium',
         provider: 'playwright',
         headless: true
       },
-      include: ['tests/browser.test.ts', 'tests/browser_integration.test.ts'],
+      include: ['tests/browser/**/*.test.ts'],
     }
   }
 ]);

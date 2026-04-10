@@ -1,4 +1,5 @@
-import { BrowserCache } from '../src/cache/browser';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { BrowserCache } from '../../src/cache/browser';
 
 describe('BrowserCache (IndexedDB Integration)', () => {
     let cache: BrowserCache;
@@ -23,8 +24,8 @@ describe('BrowserCache (IndexedDB Integration)', () => {
         await cache.set('browser-key', entry);
         const result = await cache.get('browser-key', 10000);
         
-        expect(result).to.not.be.null;
-        expect(result?.responsePayloadBase64).to.equal('browser-data');
+        expect(result).not.toBeNull();
+        expect(result?.responsePayloadBase64).toBe('browser-data');
     });
 
     it('persists data across "reloads" (new instance)', async () => {
@@ -41,14 +42,14 @@ describe('BrowserCache (IndexedDB Integration)', () => {
         const newCache = new BrowserCache();
         const result = await newCache.get('p-key', 10000);
         
-        expect(result).to.not.be.null;
-        expect(result?.responsePayloadBase64).to.equal('persistent-data');
+        expect(result).not.toBeNull();
+        expect(result?.responsePayloadBase64).toBe('persistent-data');
     });
 
     it('clears all data', async () => {
         await cache.set('k1', { responsePayloadBase64: 'd1', headers: {}, status: 200, timestamp: Date.now() });
         await cache.clear();
         const result = await cache.get('k1', 10000);
-        expect(result).to.be.null;
+        expect(result).toBeNull();
     });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { FileCache } from '../src/cache/file';
+import { FileCache } from '../../src/cache/file';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 

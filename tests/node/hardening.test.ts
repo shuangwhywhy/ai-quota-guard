@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 // Directly import from the source files to ensure instance sharing in Vitest
-import { createFetchInterceptor } from '../src/core/interceptor';
-import { setConfig } from '../src/config';
-import { globalBreaker } from '../src/breaker/circuit-breaker';
-import { globalCache } from '../src/cache/memory';
-import type { AuditEvent } from '../src/config';
+import { createFetchInterceptor } from '../../src/core/interceptor';
+import { setConfig } from '../../src/config';
+import { globalBreaker } from '../../src/breaker/circuit-breaker';
+import { globalCache } from '../../src/cache/memory';
+import type { AuditEvent } from '../../src/config';
 
 describe('Hardening & Alignment Features', () => {
   let nativeFetchMock: ReturnType<typeof vi.fn>;

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { BrowserCache } from '../src/cache/browser';
+import { BrowserCache } from '../../src/cache/browser';
 
 // Browsers tests in Vitest 4 use the stable browser mode.
 // This test runs in a real Chromium environment when started with --browser.

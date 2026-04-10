@@ -1,8 +1,8 @@
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  // Global configuration
   test: {
-    environment: 'jsdom',
     globals: true,
     coverage: {
       provider: 'v8',
@@ -15,6 +15,7 @@ export default defineConfig({
         '**/*.d.ts',
         'tsup.config.ts',
         'vitest.config.ts',
+        'vitest.workspace.ts',
       ],
     },
   },

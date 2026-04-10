@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ResponseBroadcaster } from '../src/streams/broadcaster';
+import { ResponseBroadcaster } from '../../src/streams/broadcaster';
 
 describe('ResponseBroadcaster Deep Coverage', () => {
   it('handles late joining after stream is finished', async () => {

@@ -11,6 +11,12 @@
     "outDir": "./dist",
     "rootDir": "./src"
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "tests"]
+  "include": [
+    "src/**/*",
+    "tests/**/*",
+    "vitest.config.ts",
+    "vitest.workspace.ts",
+    "tsup.config.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
 }

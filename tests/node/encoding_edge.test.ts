@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { bufferToBase64, base64ToBuffer } from '../src/utils/encoding';
+import { bufferToBase64, base64ToBuffer } from '../../src/utils/encoding';
 
 describe('Encoding Utilities - Edge Cases & Fallbacks', () => {
   it('bufferToBase64 throws Error when Buffer and btoa are missing', () => {

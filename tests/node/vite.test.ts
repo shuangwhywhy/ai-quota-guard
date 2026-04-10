@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { quotaGuardPlugin } from '../src/vite';
+import { quotaGuardPlugin } from '../../src/vite';
 
 describe('Vite Plugin (quotaGuardPlugin)', () => {
   it('returns a valid Vite plugin object with new lifecycle hooks', () => {
@@ -26,7 +26,7 @@ describe('Vite Plugin (quotaGuardPlugin)', () => {
       // @ts-expect-error - testing virtual methods
       const plugin = quotaGuardPlugin();
       const content = plugin.load('/@quota-guard/register');
-      expect(content).toContain('import "quota-guard/register"');
+      expect(content).toContain('import "@shuangwhywhy/quota-guard/register"');
       
       const nonMatching = plugin.load('other-module');
       expect(nonMatching).toBeNull();

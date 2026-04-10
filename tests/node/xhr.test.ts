@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { injectQuotaGuard, unhookFetch } from '../src/index';
+import { injectQuotaGuard, unhookFetch } from '../../src/index';
 
 describe('XMLHttpRequest Interception', () => {
     beforeEach(() => {

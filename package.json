@@ -33,7 +33,8 @@
   "scripts": {
     "build": "tsup",
     "test": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test:node": "vitest run --project=node --coverage",
+    "test:browser": "vitest run --project=browser --coverage",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "release": "release-it"

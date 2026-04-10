@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import http from 'http';
-import { hookFetch, unhookFetch } from '../src/core/interceptor';
-import { setConfig } from '../src/config';
+import { hookFetch, unhookFetch } from '../../src/core/interceptor';
+import { setConfig } from '../../src/config';
 
 describe('Node.js Native Injection', () => {
   const originalProcess = globalThis.process;

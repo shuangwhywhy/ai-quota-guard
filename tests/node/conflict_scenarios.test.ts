@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { GuardPipeline } from '../src/core/pipeline';
-import { setConfig, getDefaultConfig, getConfig } from '../src/config';
-import { globalCache } from '../src/cache/memory';
-import { globalInFlightRegistry } from '../src/registry/in-flight';
-import { generateStableKey } from '../src/keys/normalizer';
+import { GuardPipeline } from '../../src/core/pipeline';
+import { setConfig, getDefaultConfig, getConfig } from '../../src/config';
+import { globalCache } from '../../src/cache/memory';
+import { globalInFlightRegistry } from '../../src/registry/in-flight';
+import { generateStableKey } from '../../src/keys/normalizer';
 
 describe('Quota Guard - Conflict Scenarios (E2E Logic)', () => {
     let pipeline: GuardPipeline;
