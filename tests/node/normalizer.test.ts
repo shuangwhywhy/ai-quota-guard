@@ -137,6 +137,16 @@ describe('Key Normalizer (Multi-Provider Endpoints)', () => {
 
     expect(key1).not.toBe(key2);
   });
+  it('produces DIFFERENT keys when response_format changes (semantic clustering)', async () => {
+    const url = 'https://api.openai.com/v1/chat/completions';
+    const body1 = { model: 'gpt-4', messages: [], response_format: { type: 'json_object' } };
+    const body2 = { model: 'gpt-4', messages: [], response_format: { type: 'text' } };
+
+    const key1 = await generateStableKey(url, 'POST', body1, 'intelligent');
+    const key2 = await generateStableKey(url, 'POST', body2, 'intelligent');
+
+    expect(key1).not.toBe(key2);
+  });
 });
 
 describe('Key Normalizer (Edge Cases)', () => {
@@ -217,6 +227,7 @@ describe('Key Normalizer (Edge Cases)', () => {
     expect(INTELLIGENT_KEY_FIELDS).toContain('system');
     expect(INTELLIGENT_KEY_FIELDS).toContain('contents');
     expect(INTELLIGENT_KEY_FIELDS).toContain('message');
+    expect(INTELLIGENT_KEY_FIELDS).toContain('response_format');
   });
 
   it('produces different keys for different URLs with same body', async () => {

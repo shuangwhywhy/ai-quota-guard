@@ -72,6 +72,10 @@ describe('Quota Guard Fetch Interceptor', () => {
     
     expect(b1).toEqual(b2);
     expect(b1.mock).toBe('data');
+
+    // Diagnostic Headers
+    expect(res1.headers.get('X-Quota-Guard')).toBe('LIVE');
+    expect(res2.headers.get('X-Quota-Guard')).toBe('SHARED');
   });
 
   it('caches identical subsequent requests', async () => {
@@ -92,6 +96,7 @@ describe('Quota Guard Fetch Interceptor', () => {
     
     const body = await cacheRes.json();
     expect(body.mock).toBe('data');
+    expect(cacheRes.headers.get('X-Quota-Guard')).toBe('HIT');
   });
 
   it('triggers circuit breaker after failures', async () => {

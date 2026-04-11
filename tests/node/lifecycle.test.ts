@@ -18,7 +18,7 @@ describe('Setup & Lifecycle', () => {
     
     expect(getConfig().debounceMs).toBe(123);
     expect(hookSpy).toHaveBeenCalled();
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Active'));
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('READY'));
   });
 
   it('injectQuotaGuard works without config argument', () => {
