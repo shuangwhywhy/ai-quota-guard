@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.11.0](https://github.com/shuangwhywhy/ai-quota-guard/compare/v1.10.0...v1.11.0) (2026-04-11)
+
+### Features
+
+* add workflow_dispatch trigger to sync-wiki workflow ([9ac3629](https://github.com/shuangwhywhy/ai-quota-guard/commit/9ac3629861b93b52bc3ccfb6474c9e21032f955c))
+
+### Bug Fixes
+
+* prevent bundler static scanning of Node-only ClientRequest interceptor via dynamic require and vitest exclusion ([249e10d](https://github.com/shuangwhywhy/ai-quota-guard/commit/249e10dc135218141934c3f6a42b2f62ea47dc1a))
+
 ## [1.10.0](https://github.com/shuangwhywhy/ai-quota-guard/compare/v1.9.0...v1.10.0) (2026-04-11)
 
 ### Features
