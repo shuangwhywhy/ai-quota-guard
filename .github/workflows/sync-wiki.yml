@@ -11,16 +11,33 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # 必须显式开启写权限
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Sync to Wiki
-        uses: SwiftDocOrg/github-wiki-publish-action@v1
-        with:
-          path: docs
-          # Only sync markdown files
-          # Note: The action will filter these automatically if properly configured
-          # but we can also manually prune the folder in a step if needed.
-        env:
-          GH_PERSONAL_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 1. 配置 Git 用户
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # 2. 克隆 Wiki 仓库 (使用 x-access-token 认证)
+          # 注意：如果报错 404，请确保已经在 GitHub UI 中手动创建了第一条 Wiki 页面
+          git clone "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git" wiki_temp
+          
+          # 3. 同步文件 (只同步 docs 目录下的 markdown 文件)
+          # 使用 rsync 确保删除 Wiki 中已删除的文件
+          rsync -av --delete --exclude='.git' docs/ wiki_temp/
+          
+          # 4. 提交并推送
+          cd wiki_temp
+          if [ -n "$(git status --porcelain)" ]; then
+            git add .
+            git commit -m "docs: sync wiki from main [$(date +'%Y-%m-%d %H:%M:%S')]"
+            git push
+            echo "Wiki synced successfully."
+          else
+            echo "No changes to sync."
+          fi
