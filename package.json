@@ -10,6 +10,12 @@
     "quota-guard": "./dist/cli.mjs",
     "qg": "./dist/cli.mjs"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
