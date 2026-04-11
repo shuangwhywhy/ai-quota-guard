@@ -142,7 +142,7 @@ export const hookFetch = () => {
             method: request.method,
             headers: internalHeaders,
             body: request.body,
-            // @ts-ignore - duplex is required for streaming bodies in some environments
+            // @ts-expect-error - duplex is required for streaming bodies in some environments
             duplex: 'half'
           });
           controller.respondWith(response);

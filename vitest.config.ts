@@ -29,6 +29,13 @@ export default defineConfig({
               port: 63315 // Vitest default browser port
             }
           }
+        },
+        optimizeDeps: {
+          include: [
+            '@mswjs/interceptors',
+            '@mswjs/interceptors/fetch',
+            '@mswjs/interceptors/XMLHttpRequest'
+          ]
         }
       }
     ],
