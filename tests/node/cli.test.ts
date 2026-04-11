@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import pkg from '../../package.json';
 import { main } from '../../src/cli.js';
 
 vi.mock('node:fs', async () => {
@@ -13,7 +14,7 @@ vi.mock('node:fs', async () => {
             // Provide a default for the top-level readFileSync in src/cli.ts
             readFileSync: vi.fn((pathStr: string) => {
                 if (pathStr.endsWith('package.json')) {
-                    return JSON.stringify({ version: '1.9.0' });
+                    return JSON.stringify({ version: pkg.version });
                 }
                 return actual.readFileSync(pathStr);
             }),
@@ -40,7 +41,7 @@ describe('Quota Guard CLI', () => {
         console.error = mockError;
         
         // Mock readFileSync for package.json (needed for pkg.version)
-        vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({ version: '1.9.0' }));
+        vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({ version: pkg.version }));
     });
 
     afterEach(() => {
@@ -63,7 +64,7 @@ describe('Quota Guard CLI', () => {
 
     it('shows version', async () => {
         await main(['version']);
-        expect(mockLog).toHaveBeenCalledWith('v1.9.0');
+        expect(mockLog).toHaveBeenCalledWith(`v${pkg.version}`);
     });
 
     it('aborts init if file exists', async () => {

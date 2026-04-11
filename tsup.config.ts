@@ -1,7 +1,5 @@
 import { defineConfig } from 'tsup';
-import fs from 'node:fs';
-
-const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+import pkg from './package.json';
 
 export default defineConfig({
   entry: {

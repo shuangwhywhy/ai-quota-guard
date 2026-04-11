@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Sync to Wiki
-        uses: SwiftDoc/github-wiki-publish-action@v1
+        uses: SwiftDocOrg/github-wiki-publish-action@v1
         with:
           path: docs
           # Only sync markdown files

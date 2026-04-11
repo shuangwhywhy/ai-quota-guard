@@ -1,8 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
-import fs from 'node:fs';
-
-const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
+import pkg from './package.json';
 
 export default defineConfig({
   test: {
