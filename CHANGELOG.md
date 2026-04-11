@@ -1,5 +1,7 @@
 # Changelog
 
+## [1.11.1](https://github.com/shuangwhywhy/ai-quota-guard/compare/v1.11.0...v1.11.1) (2026-04-11)
+
 ## [1.11.0](https://github.com/shuangwhywhy/ai-quota-guard/compare/v1.10.0...v1.11.0) (2026-04-11)
 
 ### Features
