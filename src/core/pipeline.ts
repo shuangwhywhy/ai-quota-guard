@@ -34,7 +34,7 @@ export class GuardPipeline {
     const headersMap = this.getHeadersMap(request);
 
     // 1. Initial Matching
-    if (!this.isGuarded(requestUrl, method, baseConfig)) {
+    if (!this.isGuarded(requestUrl, method, baseConfig, request)) {
       return {};
     }
 
@@ -154,8 +154,9 @@ export class GuardPipeline {
     }
   }
 
-  private isGuarded(urlStr: string, method: string, config: QuotaGuardConfig): boolean {
+  private isGuarded(urlStr: string, method: string, config: QuotaGuardConfig, request?: Request): boolean {
     if (!config.enabled || method === 'OPTIONS') return false;
+    if (request && request.headers.get('x-quota-guard-internal') === 'true') return false;
     const endpoints = config.aiEndpoints;
     try {
       const url = urlStr.startsWith('http') ? new URL(urlStr) : new URL(urlStr, typeof location !== 'undefined' ? location.origin : 'http://localhost');

@@ -7,13 +7,14 @@ describe('Node.js Native Interception (Pure Node)', () => {
   // Use a mock audit logger to verify interception deterministically
   const auditLog = vi.fn();
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    auditLog.mockClear();
     setConfig({
       enabled: true,
       aiEndpoints: ['api.openai.com'],
       cacheTtlMs: 1000,
       debounceMs: 0,
-      auditHandler: auditLog
+      auditHandler: (e) => auditLog(e) // Wrap it to ensure it's always the latest mock
     });
 
     // Mock the global fetch which handleRequest uses internally
@@ -27,6 +28,8 @@ describe('Node.js Native Interception (Pure Node)', () => {
 
     unhookFetch();
     hookFetch();
+    // Small delay to ensure interceptors are applied in the environment
+    await new Promise(resolve => setTimeout(resolve, 10));
   });
 
   afterEach(() => {
@@ -62,6 +65,9 @@ describe('Node.js Native Interception (Pure Node)', () => {
     });
 
     const result = await responsePromise;
+    
+    // Diagnostic: check if http.request is patched
+    console.log('[Test Debug] http.request is patched:', http.request.toString().includes('interceptor') || http.request.toString().includes('bound'));
     expect(result.status).toBe(200);
     expect(JSON.parse(result.body).node).toBe('native-success');
     

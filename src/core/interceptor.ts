@@ -14,13 +14,18 @@ import { getMetadata, setMetadata } from './metadata';
 // Conditional import for Node-only interceptor to avoid browser bundling issues
 type ClientRequestInterceptorType = new () => Interceptor<HttpRequestEventMap>;
 let ClientRequestInterceptor: ClientRequestInterceptorType | null = null;
-const isNode = typeof process !== 'undefined' && process.versions && (process.versions as unknown as Record<string, string>).node;
+const isNode = typeof process !== 'undefined' && process.versions && (process.versions as Record<string, string>).node;
+
 if (isNode) {
   try {
+    // Statistically reachable require for most bundlers
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { ClientRequestInterceptor: CRI } = require('@mswjs/interceptors/ClientRequest');
-    ClientRequestInterceptor = CRI;
-  } catch { /* ignore */ }
+    const mod = require('@mswjs/interceptors/ClientRequest');
+    ClientRequestInterceptor = mod.ClientRequestInterceptor;
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn('[Quota Guard] Failed to load Node.js ClientRequestInterceptor:', e);
+  }
 }
 
 let batchInterceptor: BatchInterceptor<Interceptor<HttpRequestEventMap>[]> | null = null;
@@ -49,24 +54,21 @@ export const hookFetch = () => {
     new XMLHttpRequestInterceptor(),
   ];
 
-  // Robust Synchronous Node Injection
+  // Robust Node Interceptor Injection
   if (isNode) {
-    try {
-      // In Node.js environments (CJS or ESM), we try to get the ClientRequestInterceptor synchronously.
-      // We use a dynamic import/require dance that bypasses browser bundlers.
-      const CRI_PATH = '@mswjs/interceptors/ClientRequest';
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const mod = require(CRI_PATH);
-      if (mod && mod.ClientRequestInterceptor) {
-        interceptors.push(new mod.ClientRequestInterceptor());
-      }
-    } catch {
-      // If require fails (e.g. in pure ESM without compatible loader), we fallback to the already-started async load
-      if (ClientRequestInterceptor) {
-        interceptors.push(new ClientRequestInterceptor());
-      } else {
+    if (ClientRequestInterceptor) {
+      interceptors.push(new ClientRequestInterceptor());
+    } else {
+      // Last resort retry with static string to help some bundlers
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const mod = require('@mswjs/interceptors/ClientRequest');
+        if (mod && mod.ClientRequestInterceptor) {
+          interceptors.push(new mod.ClientRequestInterceptor());
+        }
+      } catch {
         // eslint-disable-next-line no-console
-        console.warn('[Quota Guard] Node.js bridge loading asynchronously. Initial requests might be unguarded.');
+        console.warn('[Quota Guard] Node.js bridge unavailable. Native http/https requests might be unguarded.');
       }
     }
   }
@@ -123,11 +125,31 @@ export const hookFetch = () => {
       }
 
       if (result.key) {
+        // AI Endpoint Detected & Guarded
         emitAudit({ type: 'live_called', key: result.key, url: request.url, timestamp: Date.now() });
         setMetadata(request, { 
           key: result.key, 
           resolveBroadcaster: result.resolveBroadcaster 
         });
+
+        // Loop Prevention: We use a custom header to bypass our own interceptor for this internal redirection.
+        try {
+          // IMPORTANT: We must respondWith so msw stops processing the original ClientRequest/XHR.
+          const internalHeaders = new Headers(request.headers);
+          internalHeaders.set('x-quota-guard-internal', 'true');
+          
+          const response = await fetch(request.url, {
+            method: request.method,
+            headers: internalHeaders,
+            body: request.body,
+            // @ts-ignore - duplex is required for streaming bodies in some environments
+            duplex: 'half'
+          });
+          controller.respondWith(response);
+        } catch (err) {
+          emitAudit({ type: 'request_failed', key: result.key, url: request.url, timestamp: Date.now(), details: { error: String(err) } });
+          controller.respondWith(Response.error());
+        }
       } else {
         emitAudit({ type: 'pass_through', key: 'none', url: request.url, timestamp: Date.now() });
       }
@@ -194,6 +216,7 @@ export const hookFetch = () => {
   });
 
   batchInterceptor.apply();
+  
   // eslint-disable-next-line no-console
   console.log('[Quota Guard] Unified network guard active.');
 };
