@@ -1,6 +1,7 @@
 import { getConfig, AuditEvent, QuotaGuardConfig, QuotaGuardRule } from '../config.js';
 import { generateStableKey } from '../keys/normalizer.js';
-import { globalCache, RequestMetadata } from '../cache/memory.js';
+import { globalCache } from '../cache/memory.js';
+import type { RequestMetadata } from '../cache/types.js';
 import { globalInFlightRegistry } from '../registry/in-flight.js';
 import { globalBreaker, CircuitBreakerError } from '../breaker/circuit-breaker.js';
 import { globalDebouncer } from '../utils/debounce-promise.js';

@@ -1,11 +1,13 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { ICacheAdapter, SerializedCacheEntry } from './memory.js';
+import { SerializedCacheEntry } from './types.js';
+import { BaseCache } from './base.js';
 
-export class FileCache implements ICacheAdapter {
+export class FileCache extends BaseCache {
   private cacheDir: string;
 
   constructor(cacheDir: string = '.quota-guard/cache') {
+    super();
     this.cacheDir = path.resolve(process.cwd(), cacheDir);
   }
 
@@ -29,18 +31,11 @@ export class FileCache implements ICacheAdapter {
     await fs.writeFile(filePath, JSON.stringify(data), 'utf-8');
   }
 
-  async get(key: string, ttlMs: number): Promise<SerializedCacheEntry | null> {
+  protected async _get(key: string): Promise<SerializedCacheEntry | null> {
     const filePath = this.getFilePath(key);
     try {
       const content = await fs.readFile(filePath, 'utf-8');
-      const entry = JSON.parse(content) as SerializedCacheEntry;
-      
-      const now = Date.now();
-      if (now - entry.timestamp > ttlMs) {
-        await this.delete(key);
-        return null;
-      }
-      return entry;
+      return JSON.parse(content) as SerializedCacheEntry;
     } catch {
       return null;
     }
@@ -68,3 +63,4 @@ export class FileCache implements ICacheAdapter {
     }
   }
 }
+

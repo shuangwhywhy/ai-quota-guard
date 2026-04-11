@@ -1,11 +1,14 @@
-import { ICacheAdapter, SerializedCacheEntry } from './memory.js';
+import { SerializedCacheEntry } from './types.js';
+import { BaseCache } from './base.js';
 
-export class BrowserCache implements ICacheAdapter {
+export class BrowserCache extends BaseCache {
   private dbName = 'quota-guard-cache';
   private storeName = 'responses';
   private db: IDBDatabase | null = null;
 
-  constructor() {}
+  constructor() {
+    super();
+  }
 
   private async openDb(): Promise<IDBDatabase> {
     if (this.db) return this.db;
@@ -30,7 +33,7 @@ export class BrowserCache implements ICacheAdapter {
     });
   }
 
-  async get(key: string, ttlMs: number): Promise<SerializedCacheEntry | null> {
+  protected async _get(key: string): Promise<SerializedCacheEntry | null> {
     const db = await this.openDb();
     return new Promise((resolve) => {
       const transaction = db.transaction(this.storeName, 'readonly');
@@ -38,14 +41,7 @@ export class BrowserCache implements ICacheAdapter {
       const request = store.get(key);
 
       request.onsuccess = () => {
-        const entry = request.result as SerializedCacheEntry | undefined;
-        if (!entry) return resolve(null);
-
-        if (Date.now() - entry.timestamp > ttlMs) {
-          this.delete(key);
-          return resolve(null);
-        }
-        resolve(entry);
+        resolve((request.result as SerializedCacheEntry) || null);
       };
       request.onerror = () => resolve(null);
     });
@@ -75,3 +71,4 @@ export class BrowserCache implements ICacheAdapter {
     transaction.objectStore(this.storeName).clear();
   }
 }
+

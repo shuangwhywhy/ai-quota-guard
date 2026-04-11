@@ -2,7 +2,8 @@ import { BatchInterceptor, HttpRequestEventMap, Interceptor } from '@mswjs/inter
 import { FetchInterceptor } from '@mswjs/interceptors/fetch';
 import { XMLHttpRequestInterceptor } from '@mswjs/interceptors/XMLHttpRequest';
 import { getConfig, type AuditEvent } from '../config.js';
-import { globalCache, type SerializedCacheEntry } from '../cache/memory.js';
+import { globalCache } from '../cache/memory.js';
+import type { SerializedCacheEntry } from '../cache/types.js';
 import { globalInFlightRegistry as registry } from '../registry/in-flight.js';
 import { globalBreaker, CircuitBreakerError } from '../breaker/circuit-breaker.js';
 import { GuardPipeline } from './pipeline.js';

@@ -1,4 +1,4 @@
-import type { ICacheAdapter } from './cache/memory.js';
+import type { ICacheAdapter } from './cache/types.js';
 
 export interface QuotaGuardRule {
   /** Matcher for the request. If it matches, the overrides are applied. */

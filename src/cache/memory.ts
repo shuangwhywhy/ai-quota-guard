@@ -1,26 +1,7 @@
-export interface RequestMetadata {
-  url: string;
-  method: string;
-  headers: Record<string, string>;
-}
+import { SerializedCacheEntry } from './types.js';
+import { BaseCache } from './base.js';
 
-export interface SerializedCacheEntry {
-  responsePayloadBase64: string;
-  headers: Record<string, string>;
-  status: number;
-  timestamp: number;
-  ttlMs?: number;
-  /** Snapshot of the request that generated this entry, used for collision detection. */
-  requestSnapshot?: RequestMetadata;
-}
-
-export interface ICacheAdapter {
-  get(key: string, ttlMs: number): SerializedCacheEntry | null | Promise<SerializedCacheEntry | null>;
-  set(key: string, data: SerializedCacheEntry): void | Promise<void>;
-  clear?(): void | Promise<void>;
-}
-
-export class MemoryCache implements ICacheAdapter {
+export class MemoryCache extends BaseCache {
   private store: Map<string, SerializedCacheEntry> = new Map();
   private opCount = 0;
   private readonly SWEEP_THRESHOLD = 50;
@@ -39,26 +20,24 @@ export class MemoryCache implements ICacheAdapter {
     }
   }
 
-  set(key: string, data: SerializedCacheEntry): void {
+  async set(key: string, data: SerializedCacheEntry): Promise<void> {
     this.store.set(key, data);
     this.triggerSweep();
   }
 
-  get(key: string, ttlMs: number): SerializedCacheEntry | null {
+  protected async _get(key: string): Promise<SerializedCacheEntry | null> {
     this.triggerSweep();
-    const entry = this.store.get(key);
-    if (!entry) return null;
-
-    if (Date.now() - entry.timestamp > ttlMs) {
-      this.store.delete(key);
-      return null;
-    }
-    return entry;
+    return this.store.get(key) || null;
   }
 
-  clear(): void {
+  async delete(key: string): Promise<void> {
+    this.store.delete(key);
+  }
+
+  async clear(): Promise<void> {
     this.store.clear();
   }
 }
 
 export const globalCache = new MemoryCache();
+

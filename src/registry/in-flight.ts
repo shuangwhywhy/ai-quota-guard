@@ -1,5 +1,5 @@
 import type { ResponseBroadcaster } from '../streams/broadcaster';
-import type { RequestMetadata } from '../cache/memory';
+import type { RequestMetadata } from '../cache/types.js';
 
 export interface InFlightEntry {
   broadcaster: ResponseBroadcaster | Promise<ResponseBroadcaster>;
