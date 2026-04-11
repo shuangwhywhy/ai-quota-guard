@@ -37,15 +37,12 @@ Open your browser's **Network Tab** to see the magic.
 
 ---
 
-## 3. The CLI Quickstart
-You don't even need a separate project to test Quota Guard. You can use the built-in CLI to initialize a sandbox.
+## 3. The CLI Documentation Hub
+The easiest way to explore documentation and examples is through our built-in CLI. This works anywhere, even if Quota Guard is installed as a dependency.
 
 ```bash
-# Initialize a config in your current folder
-npx qg init
-
-# Verify the config hierarchy
-npx qg status
+# Start the interactive documentation center
+npx qg docs
 ```
 
 ---

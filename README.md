@@ -98,8 +98,8 @@ Quota Guard comes with a built-in CLI to help you get started quickly.
 # Initialize a template configuration file
 npx qg init
 
-# Or using the full name
-npx quota-guard init
+# Open the interactive documentation center
+npx qg docs
 ```
 
 This creates a `.quotaguardrc.ts` file in your project root with best-practice defaults and examples.
