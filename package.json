@@ -40,7 +40,7 @@
     "release": "dotenv -- release-it --ci",
     "release:interactive": "dotenv -- release-it",
     "publish": "dotenv -- release-it --ci --no-increment --git.commit=false --git.tag=false --git.push=false",
-    "docs": "npx serve docs"
+    "docs": "open https://github.com/shuangwhywhy/ai-quota-guard/wiki"
   },
   "keywords": [
     "ai",

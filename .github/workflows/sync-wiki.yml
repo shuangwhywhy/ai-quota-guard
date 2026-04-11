@@ -1,0 +1,25 @@
+name: Sync Wiki
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Sync to Wiki
+        uses: SwiftDoc/github-wiki-publish-action@v1
+        with:
+          path: docs
+          # Only sync markdown files
+          # Note: The action will filter these automatically if properly configured
+          # but we can also manually prune the folder in a step if needed.
+        env:
+          GH_PERSONAL_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}

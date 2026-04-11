@@ -1,21 +1,30 @@
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
+import fs from 'node:fs';
+
+const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
 
 export default defineConfig({
   test: {
     // Consolidated Projects for Node and Real Browser Environments
     projects: [
       {
+        name: 'node',
+        define: {
+          PKG_VERSION: JSON.stringify(pkg.version),
+        },
         test: {
-          name: 'node',
           environment: 'node',
           include: ['tests/node/**/*.test.ts'],
           exclude: ['tests/browser/**/*'],
         }
       },
       {
+        name: 'browser',
+        define: {
+          PKG_VERSION: JSON.stringify(pkg.version),
+        },
         test: {
-          name: 'browser',
           include: ['tests/browser/**/*.test.ts'],
           browser: {
             enabled: true,

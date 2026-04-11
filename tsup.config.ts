@@ -1,4 +1,7 @@
 import { defineConfig } from 'tsup';
+import fs from 'node:fs';
+
+const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf8'));
 
 export default defineConfig({
   entry: {
@@ -15,4 +18,7 @@ export default defineConfig({
   minify: false,
   shims: true,
   external: ['vite'],
+  define: {
+    PKG_VERSION: JSON.stringify(pkg.version),
+  },
 });

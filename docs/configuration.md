@@ -25,7 +25,7 @@ Quota Guard searches for configuration in the following order of priority (1 = h
 
 ### `aiEndpoints`
 - **Type**: `(string | RegExp)[]`
-- **Default**: Covers OpenAI, Anthropic, Gemini, DeepSeek, etc. (See [registry.ts](file:///Users/yizhouqiang/MyProjects/AI/quota-guard/src/providers/registry.ts))
+- **Default**: Covers OpenAI, Anthropic, Gemini, DeepSeek, etc. (See [registry.ts](../src/providers/registry.ts))
 - **Description**: A list of hostnames to intercept. Use regex for local proxies like `localhost:11434`.
 
 ### `cacheTtlMs`
