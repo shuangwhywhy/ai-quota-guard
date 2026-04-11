@@ -1,5 +1,11 @@
 # Changelog
 
+* refactor: improve URL regex matching in pipeline and expand test coverage for registry and browser hardening (e3b87ea)
+* test: add diagnostic header assertions, update lifecycle log expectation, and include response_format in semantic key normalization (667d80b)
+* docs: refactor README for improved clarity and update configuration documentation (738aab0)
+* feat: add response_format to intelligent fields and include X-Quota-Guard status headers in responses (d29eada)
+* chore: add environment variable support for release-it and update ignore files (d9f599b)
+
 ## [1.9.0](https://github.com/shuangwhywhy/ai-quota-guard/compare/v1.8.0...v1.9.0) (2026-04-11)
 
 ### Features
