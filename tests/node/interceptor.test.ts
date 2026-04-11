@@ -6,7 +6,7 @@ import { globalInFlightRegistry } from '../../src/registry/in-flight';
 
 /**
  * These tests exercise the core Quota Guard pipeline (createFetchInterceptor)
- * directly, bypassing hookFetch() to avoid dependency on @mswjs/interceptors
+ * directly, bypassing applyGlobalGuards() to avoid dependency on @mswjs/interceptors
  * which uses its own internal fetch routing. This keeps tests deterministic.
  */
 describe('Quota Guard Fetch Interceptor', () => {

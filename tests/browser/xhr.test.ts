@@ -2,7 +2,7 @@
  
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { injectQuotaGuard, unhookFetch } from '../../src/index';
+import { injectQuotaGuard, removeGlobalGuards } from '../../src/index';
 
 describe('XMLHttpRequest Interception', () => {
     beforeEach(() => {
@@ -23,7 +23,7 @@ describe('XMLHttpRequest Interception', () => {
     });
 
     afterEach(() => {
-        unhookFetch();
+        removeGlobalGuards();
         vi.restoreAllMocks();
     });
 

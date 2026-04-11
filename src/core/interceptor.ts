@@ -44,9 +44,10 @@ const pipeline = new GuardPipeline(emitAudit);
 // Removed local bufferToBase64, now imported from utils
 
 /**
- * Global Network Hook: Unified for Node and Browsers.
+ * Global Network Interceptor: Passively catch and manage all traffic (Fetch & XHR).
+ * This provides a solid custody over requests without library-specific preferences.
  */
-export const hookFetch = () => {
+export const applyGlobalGuards = () => {
   if (batchInterceptor) return;
 
   const interceptors: Interceptor<HttpRequestEventMap>[] = [
@@ -106,12 +107,13 @@ export const hookFetch = () => {
       }
 
       if (result.response) {
-        // XHR Compatibility Fix: JSDOM XHR and some environments don't support ReadableStream payloads well.
-        // We detect XHR by checking 'X-Requested-With' or using a more robust environment check.
+        // XHR Transport Compatibility:
+        // Some environments (like JSDOM or older browsers) cannot handle a ReadableStream body 
+        // being piped into a simulated XMLHttpRequest. To be 'solid', we buffer the response 
+        // to ensure it reaches the business system regardless of their choice of transport.
         const isXhr = request.headers.get('x-requested-with') === 'XMLHttpRequest' || 
                       (typeof XMLHttpRequest !== 'undefined' && request instanceof Request && !('referrerPolicy' in request) && (typeof window !== 'undefined'));
         
-        // Fail-safe: If we are in a browser-like env (JSDOM) and it's a stream, convert to ArrayBuffer if body is a stream
         if (isXhr && result.response.body && !result.response.bodyUsed) {
            const buffer = await result.response.clone().arrayBuffer();
            controller.respondWith(new Response(buffer, { 
@@ -119,6 +121,7 @@ export const hookFetch = () => {
              headers: result.response.headers 
            }));
         } else {
+           // For Fetch or compatible transports, we provide the native Stream API (ReadableStream).
            controller.respondWith(result.response);
         }
         return;
@@ -217,7 +220,7 @@ export const hookFetch = () => {
   batchInterceptor.apply();
 };
 
-export const unhookFetch = () => {
+export const removeGlobalGuards = () => {
   if (batchInterceptor) {
     batchInterceptor.dispose();
     batchInterceptor = null;

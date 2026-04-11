@@ -9,14 +9,13 @@ describe('Quota Guard Public API (index.ts)', () => {
     expect(QuotaGuard.setConfig).toBeDefined();
     expect(QuotaGuard.globalCache).toBeDefined();
     expect(QuotaGuard.globalBreaker).toBeDefined();
-    expect(QuotaGuard.unhookFetch).toBeDefined();
-    expect(QuotaGuard.hookAxios).toBeDefined();
+    expect(QuotaGuard.removeGlobalGuards).toBeDefined();
   });
 });
 
 describe('Full Integration Lifecycle', () => {
   afterEach(() => {
-    QuotaGuard.unhookFetch();
+    QuotaGuard.removeGlobalGuards();
     vi.restoreAllMocks();
   });
 
@@ -37,7 +36,7 @@ describe('Full Integration Lifecycle', () => {
     await globalThis.fetch('https://api.openai.com/v1/models');
     expect(mockNativeFetch).toHaveBeenCalled();
 
-    QuotaGuard.unhookFetch();
+    QuotaGuard.removeGlobalGuards();
     Object.defineProperty(globalThis, 'process', { value: originalProcess, configurable: true });
     globalThis.fetch = originalFetch;
   });
@@ -49,7 +48,7 @@ describe('Full Integration Lifecycle', () => {
       configurable: true
     });
 
-    QuotaGuard.unhookFetch();
+    QuotaGuard.removeGlobalGuards();
     QuotaGuard.injectQuotaGuard({ enabled: true, aiEndpoints: ['api.openai.com'] });
 
     // In Vitest/Node, we use http.request to ensure we trip the ClientRequestInterceptor
@@ -69,7 +68,7 @@ describe('Full Integration Lifecycle', () => {
       req.end();
     });
 
-    QuotaGuard.unhookFetch();
+    QuotaGuard.removeGlobalGuards();
     Object.defineProperty(globalThis, 'process', { value: originalProcess, configurable: true });
   });
 });

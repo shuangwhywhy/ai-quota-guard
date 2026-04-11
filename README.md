@@ -12,12 +12,12 @@
 
 During development, UI re-renders, automatic effects, and repetitive debugging sessions can cause hundreds of identical LLM API calls. This leads to blown budgets, rate-limiting (`429 Too Many Requests`), and interrupted development high.
 
-AI Quota Guard is a **zero-intrusion hook** that seamlessly intercepts network calls — specifically those bound for AI endpoints. Without writing a single line of wrapper code, it provides:
+AI Quota Guard is a **zero-preference, zero-intrusion engine** that seamlessly intercepts network calls — specifically those bound for AI endpoints. It is a purely passive observer: it doesn't care what library you use (Axios, Fetch, Got, XHR) and it doesn't modify your configurations. It simply "catches" whatever flows through the network:
 
 - **🏦 Save Money**: Intelligent caching eliminates costs for identical prompts across sessions.
 - **🚀 Faster DX**: In-flight deduplication and aggregation make your app feel snappier.
 - **🛡️ Safety First**: Per-key and Global Circuit Breakers stop infinite loops from nuking your API quota.
-- **🔌 Zero-Intrusion**: Works with any SDK (OpenAI, LangChain, etc.) via native Node/Vite injection.
+- **🔌 Zero-Intrusion**: Works with ANY SDK (OpenAI, LangChain, etc.) via native global interception.
 
 ---
 
@@ -34,12 +34,13 @@ NODE_ENV=development node --require @shuangwhywhy/quota-guard/register app.js
 
 **Using ESM (`"type": "module"`)?** Use `--import` instead:
 ```bash
+# Node >= 20.6.0
 NODE_ENV=development node --import @shuangwhywhy/quota-guard/register app.js
 ```
 
 ### 2. Vite (Frontend)
 
-Add the plugin to your `vite.config.ts`. It strictly only activates during development builds.
+Add the plugin to your `vite.config.ts`. It activates purely as a passive guard during development.
 
 ```typescript
 import { quotaGuardPlugin } from '@shuangwhywhy/quota-guard/vite';
@@ -49,17 +50,9 @@ export default {
 };
 ```
 
-### 3. Axios Support
+### 3. Transparent Observation
 
-For Axios users, we provide a dedicated hook that enforces the `fetch` adapter for compatible interception:
-
-```typescript
-import axios from 'axios';
-import { hookAxios } from '@shuangwhywhy/quota-guard/axios';
-
-const myAxios = axios.create();
-hookAxios(myAxios); // Now this instance is guarded!
-```
+Unlike other tools, Quota Guard **does not require any library-specific hooks**. Whether you use `axios`, `window.fetch`, or `XMLHttpRequest` directly, they are all automatically "caught" and guarded once initialized.
 
 ---
 

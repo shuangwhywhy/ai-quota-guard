@@ -3,5 +3,4 @@ export { getConfig, setConfig, type QuotaGuardConfig, type AuditEvent } from './
 export { globalCache, MemoryCache, type SerializedCacheEntry, type ICacheAdapter } from './cache/memory.js';
 export { globalBreaker, CircuitBreaker, CircuitBreakerError } from './breaker/circuit-breaker.js';
 export { globalInFlightRegistry, InFlightRegistry } from './registry/in-flight.js';
-export { unhookFetch } from './core/interceptor.js';
-export { hookAxios } from './axios.js';
+export { removeGlobalGuards } from './core/interceptor.js';

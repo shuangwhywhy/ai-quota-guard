@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import http from 'http';
-import { hookFetch, unhookFetch } from '../../src/core/interceptor';
+import { applyGlobalGuards, removeGlobalGuards } from '../../src/core/interceptor';
 import { setConfig } from '../../src/config';
 
 describe('Node.js Native Interception (Pure Node)', () => {
@@ -18,7 +18,7 @@ describe('Node.js Native Interception (Pure Node)', () => {
     });
 
     // Mock the global fetch which handleRequest uses internally
-    // We must do this BEFORE hookFetch to ensure the interceptor sees the mock
+    // We must do this BEFORE applyGlobalGuards to ensure the interceptor sees the mock
     globalThis.fetch = vi.fn().mockImplementation(async () => {
       return new Response(JSON.stringify({ node: 'native-success' }), {
         status: 200,
@@ -26,14 +26,14 @@ describe('Node.js Native Interception (Pure Node)', () => {
       });
     });
 
-    unhookFetch();
-    hookFetch();
+    removeGlobalGuards();
+    applyGlobalGuards();
     // Small delay to ensure interceptors are applied in the environment
     await new Promise(resolve => setTimeout(resolve, 10));
   });
 
   afterEach(() => {
-    unhookFetch();
+    removeGlobalGuards();
     vi.restoreAllMocks();
   });
 

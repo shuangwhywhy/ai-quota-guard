@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { injectQuotaGuard, unhookFetch } from '../../src/index';
+import { injectQuotaGuard, removeGlobalGuards } from '../../src/index';
 
 describe('Streaming Interception (Browser)', { browser: true }, () => {
     let nativeFetchSpy: ReturnType<typeof vi.fn>;
@@ -37,7 +37,7 @@ describe('Streaming Interception (Browser)', { browser: true }, () => {
     });
 
     afterEach(() => {
-        unhookFetch();
+        removeGlobalGuards();
         vi.unstubAllGlobals();
     });
 

@@ -8,8 +8,8 @@ describe('Setup & Lifecycle', () => {
     vi.restoreAllMocks();
   });
 
-  it('injectQuotaGuard sets config and calls hookFetch', async () => {
-    const hookSpy = vi.spyOn(interceptor, 'hookFetch').mockImplementation(() => {});
+  it('injectQuotaGuard sets config and calls applyGlobalGuards', async () => {
+    const hookSpy = vi.spyOn(interceptor, 'applyGlobalGuards').mockImplementation(() => {});
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     
     await injectQuotaGuard({
@@ -22,7 +22,7 @@ describe('Setup & Lifecycle', () => {
   });
 
   it('injectQuotaGuard works without config argument', async () => {
-    const hookSpy = vi.spyOn(interceptor, 'hookFetch').mockImplementation(() => {});
+    const hookSpy = vi.spyOn(interceptor, 'applyGlobalGuards').mockImplementation(() => {});
     vi.spyOn(console, 'log').mockImplementation(() => {});
     
     await injectQuotaGuard();
@@ -31,7 +31,7 @@ describe('Setup & Lifecycle', () => {
   });
 
   it('register.ts side effect works', async () => {
-    const hookSpy = vi.spyOn(interceptor, 'hookFetch').mockImplementation(() => {});
+    const hookSpy = vi.spyOn(interceptor, 'applyGlobalGuards').mockImplementation(() => {});
     vi.spyOn(console, 'log').mockImplementation(() => {});
     
     // Dynamically importing register should trigger injection

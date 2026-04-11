@@ -7,7 +7,7 @@ import { MemoryCache } from '../../src/cache/memory';
 import { FileCache } from '../../src/cache/file';
 import { ResponseBroadcaster } from '../../src/streams/broadcaster';
 import { PromiseDebouncer } from '../../src/utils/debounce-promise';
-import { hookFetch, unhookFetch, createFetchInterceptor } from '../../src/core/interceptor';
+import { applyGlobalGuards, removeGlobalGuards, createFetchInterceptor } from '../../src/core/interceptor';
 import { setConfig } from '../../src/config';
 import * as fs from 'fs/promises';
 
@@ -29,7 +29,7 @@ vi.mock('fs/promises', async (importOriginal) => {
   });
 
   afterEach(() => {
-    unhookFetch();
+    removeGlobalGuards();
   });
 
   describe('setup.ts', () => {
@@ -236,8 +236,8 @@ vi.mock('fs/promises', async (importOriginal) => {
        expect(mockFetch).toHaveBeenCalled();
     });
 
-    it('handles abort correctly in hookFetch listener', async () => {
-      hookFetch();
+    it('handles abort correctly in applyGlobalGuards listener', async () => {
+      applyGlobalGuards();
       const controller = new AbortController();
       const mockReq = new Request('https://api.openai.com/v1/chat', { 
         signal: controller.signal,
@@ -301,13 +301,13 @@ vi.mock('fs/promises', async (importOriginal) => {
     });
 
     it('covers register.ts singleton survival and repeat injection', () => {
-      // Repeat injection branch in hookFetch
-      hookFetch();
-      hookFetch();
+      // Repeat injection branch in applyGlobalGuards
+      applyGlobalGuards();
+      applyGlobalGuards();
     });
 
-    it('covers batchInterceptor events via hookFetch', async () => {
-      hookFetch();
+    it('covers batchInterceptor events via applyGlobalGuards', async () => {
+      applyGlobalGuards();
       const mockRes = new Response('hooked');
       const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(mockRes);
       
@@ -387,46 +387,3 @@ vi.mock('fs/promises', async (importOriginal) => {
     });
   });
 
-  describe('axios.ts Harden', () => {
-    it('handles RegExp endpoints and old Axios versions', async () => {
-      const { hookAxios } = await import('../../src/axios');
-      const mockAxios = {
-        interceptors: {
-          request: { use: vi.fn((fn) => { (mockAxios as unknown as { fn: (c: unknown) => { adapter: unknown } }).fn = fn; }) }
-        },
-        VERSION: '1.6.0' // Too old
-      };
-
-      vi.spyOn(console, 'warn').mockImplementation(() => {});
-      hookAxios(mockAxios as never);
-      
-      setConfig({ enabled: true, aiEndpoints: [/openai/] });
-      // Case 1: RegExp match
-      const config = { url: 'https://api.openai.com/v1/chat' };
-      const res = (mockAxios as unknown as { fn: (c: unknown) => { adapter: unknown } }).fn(config);
-      expect(res.adapter).toBeUndefined(); // Bypass because of version
-      
-      // Case 2: String match
-      const config2 = { url: 'https://api.deepseek.com' };
-      setConfig({ enabled: true, aiEndpoints: ['deepseek'] });
-      (mockAxios as unknown as { fn: (c: unknown) => void }).fn(config2);
-    });
-
-    it('handles axios version with no match', async () => {
-        const { hookAxios } = await import('../../src/axios');
-        const mockAxios = {
-            interceptors: { request: { use: vi.fn((fn) => { (mockAxios as unknown as { fn: (c: unknown) => void }).fn = fn; }) } },
-            VERSION: 'invalid'
-        };
-        hookAxios(mockAxios as never);
-        setConfig({ enabled: true, aiEndpoints: ['o'] });
-        (mockAxios as unknown as { fn: (c: unknown) => void }).fn({ url: 'o' });
-    });
-
-    it('handles invalid axios gracefully', async () => {
-      const { hookAxios } = await import('../../src/axios');
-      const logSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      hookAxios(null);
-      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Invalid Axios instance'));
-    });
-  });

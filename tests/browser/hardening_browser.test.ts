@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { BrowserCache } from '../../src/cache/browser';
 import { ResponseBroadcaster } from '../../src/streams/broadcaster';
-import { injectQuotaGuard, unhookFetch } from '../../src/index';
+import { injectQuotaGuard, removeGlobalGuards } from '../../src/index';
 
 describe('Quota Guard Hardening (Browser)', { browser: true }, () => {
   beforeEach(() => {
@@ -9,7 +9,7 @@ describe('Quota Guard Hardening (Browser)', { browser: true }, () => {
   });
 
   afterEach(() => {
-    unhookFetch();
+    removeGlobalGuards();
     vi.unstubAllGlobals();
   });
 

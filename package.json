@@ -23,11 +23,6 @@
       "types": "./dist/vite.d.ts",
       "import": "./dist/vite.mjs",
       "require": "./dist/vite.js"
-    },
-    "./axios": {
-      "types": "./dist/axios.d.ts",
-      "import": "./dist/axios.mjs",
-      "require": "./dist/axios.js"
     }
   },
   "scripts": {
