@@ -66,7 +66,7 @@ export function deepSortKeys<T>(obj: T): T {
   return obj;
 }
 
-export const INTELLIGENT_KEY_FIELDS = ['model', 'messages', 'prompt', 'system', 'contents', 'message'];
+export const INTELLIGENT_KEY_FIELDS = ['model', 'messages', 'prompt', 'system', 'contents', 'message', 'response_format'];
 
 export const generateStableKey = async (
   url: string | URL, 

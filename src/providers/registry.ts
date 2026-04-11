@@ -13,7 +13,8 @@ export const PROVIDER_RULES: ProviderRule[] = [
     extractSemanticFields: (body) => ({
       model: body.model as unknown as string,
       messages: body.messages as unknown as unknown[],
-      prompt: body.prompt as unknown as string
+      prompt: body.prompt as unknown as string,
+      response_format: body.response_format as Record<string, unknown>
     })
   },
   {
@@ -39,7 +40,8 @@ export const PROVIDER_RULES: ProviderRule[] = [
     hostnameMatch: /api\.deepseek\.com/,
     extractSemanticFields: (body) => ({
       model: body.model as unknown as string,
-      messages: body.messages as unknown as unknown[]
+      messages: body.messages as unknown as unknown[],
+      response_format: body.response_format as Record<string, unknown>
     })
   },
   {
@@ -48,7 +50,8 @@ export const PROVIDER_RULES: ProviderRule[] = [
     extractSemanticFields: (body) => ({
       model: body.model as unknown as string,
       messages: body.messages as unknown as unknown[],
-      prompt: body.prompt as unknown as string
+      prompt: body.prompt as unknown as string,
+      response_format: body.response_format as Record<string, unknown>
     })
   },
   {
@@ -70,7 +73,7 @@ export function extractSemanticFields(urlStr: string, body: unknown): unknown {
 
   const bodyRecord = body as Record<string, unknown>;
   const config = getConfig();
-  const genericFields = config.intelligentFields || ['model', 'messages', 'prompt', 'system', 'contents', 'message'];
+  const genericFields = config.intelligentFields || ['model', 'messages', 'prompt', 'system', 'contents', 'message', 'response_format'];
   
   const rule = PROVIDER_RULES.find(r => {
     if (r.hostnameMatch instanceof RegExp) {

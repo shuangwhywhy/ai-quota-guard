@@ -77,8 +77,44 @@ const myAxios = axios.create();
 hookAxios(myAxios); // Now this instance is guarded!
 ```
 
-### 5. Native Native Interception
-Quota Guard is designed to be zero-intrusion. Once injected via the Node register or Vite plugin, it automatically covers `fetch`, `XMLHttpRequest`, and Node.js `http`/`https` modules without any configuration for specific SDKs.
+### 5. Verification: Is It Working?
+Once injected, Quota Guard provides several clear signals to confirm it is active:
+
+- **Startup Banner**: You will see a visual banner in your terminal during initialization:
+  ```text
+  ┌───────────────────────────────────────┐
+  │ [Quota Guard] v1.8.0 READY            │
+  │ Mode: Development (Guarded)           │
+  └───────────────────────────────────────┘
+  ```
+- **Response Headers**: Check the **Network Tab** (Browser) or response object (Node). All intercepted requests will have an `X-Quota-Guard` header:
+    - `HIT`: Served from cache.
+    - `SHARED`: Joined an existing live request (deduplicated).
+    - `LIVE`: Validated AI call passed to the network.
+- **Audit Console**: Pass an `auditHandler` to see every event in real-time:
+  ```typescript
+  injectQuotaGuard({
+    auditHandler: (e) => console.log(`[Guard] ${e.type} -> ${e.key.slice(0, 8)}`)
+  });
+  ```
+
+### 6. Troubleshooting
+If you don't see the expected behavior, check these common causes:
+
+#### No Startup Banner
+- **Node**: Ensure you are using `--require` (CJS) or `--import` (ESM) with the correct package path: `@shuangwhywhy/quota-guard/register`.
+- **Vite**: Ensure the `quotaGuardPlugin()` is added to your `vite.config.ts`.
+
+#### No `X-Quota-Guard` Headers
+- **Matching**: Verify the request URL matches one of the `aiEndpoints` (default: most major LLM providers).
+- **Environment**: By default, the guard only activates if `NODE_ENV` is NOT `production`. Ensure your dev environment sets `NODE_ENV=development`.
+
+#### Always `LIVE` (No Cache Hits)
+- **Key Conflict**: Check the terminal for `[FINGERPRINT_COLLISION]` warnings. This happens if you change a semantic field like `model` or `messages`.
+- **Logic**: By default, parameters like `temperature` are ignored. If you NEED them to invalidate the cache, add them to `intelligentFields` in your config.
+
+#### 599 Errors (Circuit Breaker)
+- This means a request failed repeatedly (default: 3 times). Use `X-Quota-Guard-Bypass: true` to force a retry once you've fixed the upstream issue.
 
 ## Advanced Configuration
 ...
@@ -90,13 +126,14 @@ injectQuotaGuard({
   inFlightTimeoutMs: 60000,      // Max wait for shared requests (default: 60s)
   breakerMaxFailures: 3,
   globalBreakerMaxFailures: 10,   // Process-wide safety net
-  intelligentFields: ['model', 'messages', 'prompt', 'system', 'contents', 'message'], 
+  intelligentFields: ['model', 'messages', 'prompt', 'system', 'contents', 'message', 'response_format'], 
   aiEndpoints: [/api\.my-custom-llm\.com/, 'other-provider.com'], // Supports String or RegExp
   auditHandler: (event) => console.log('Quota Guard Event:', event.type, event.key)
 });
 ```
 
 ### Audit Event Types
+...
 
 | Event Type | Description |
 | :--- | :--- |

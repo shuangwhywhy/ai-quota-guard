@@ -13,6 +13,7 @@ export interface GuardResult {
   error?: Error;
   key?: string;
   isHit?: boolean;
+  status?: 'HIT' | 'LIVE' | 'SHARED' | 'BREAKER';
   broadcaster?: ResponseBroadcaster;
   resolveBroadcaster?: (b: ResponseBroadcaster) => void;
 }
@@ -74,13 +75,13 @@ export class GuardPipeline {
         // 5a. Global Breaker
         if (globalBreaker.isGlobalOpen(effectiveConfig.globalBreakerMaxFailures, effectiveConfig.breakerResetTimeoutMs)) {
           this.emitAudit({ type: 'global_breaker_opened', key, url: requestUrl, timestamp: Date.now() });
-          return { error: new CircuitBreakerError(`Quota Guard: GLOBAL circuit breaker OPEN. Process-wide safety triggered.`), key };
+          return { error: new CircuitBreakerError(`Quota Guard: GLOBAL circuit breaker OPEN. Process-wide safety triggered.`), key, status: 'BREAKER' };
         }
 
         // 5b. Per-Key Breaker
         if (globalBreaker.isOpen(key, effectiveConfig.breakerMaxFailures, effectiveConfig.breakerResetTimeoutMs)) {
           this.emitAudit({ type: 'breaker_opened', key, url: requestUrl, timestamp: Date.now() });
-          return { error: new CircuitBreakerError(`Quota Guard: Circuit breaker OPEN for key ${key}.`), key };
+          return { error: new CircuitBreakerError(`Quota Guard: Circuit breaker OPEN for key ${key}.`), key, status: 'BREAKER' };
         }
 
         // 6. Cache Check (Optimization Guard - Bypassable)
@@ -96,19 +97,25 @@ export class GuardPipeline {
             // Only config-driven bypass or internal bypass headers are honored.
             this.logIntentConflict('BYPASS_IGNORED', requestUrl, key, 'business-level cache-control', 'Served from cache (Guard Safety Policy)');
             const buffer = this.base64ToBuffer(cached.responsePayloadBase64);
+            const headers = new Headers(cached.headers);
+            headers.set('X-Quota-Guard', 'HIT');
             return { 
-              response: new Response(buffer, { status: cached.status, headers: cached.headers }), 
+              response: new Response(buffer, { status: cached.status, headers }), 
               key, 
-              isHit: true 
+              isHit: true,
+              status: 'HIT' 
             };
           } else {
             this.logFingerprintConflict(currentSnapshot, cached.requestSnapshot, key);
             this.emitAudit({ type: 'cache_hit', key, url: requestUrl, timestamp: Date.now() });
             const buffer = this.base64ToBuffer(cached.responsePayloadBase64);
+            const headers = new Headers(cached.headers);
+            headers.set('X-Quota-Guard', 'HIT');
             return { 
-              response: new Response(buffer, { status: cached.status, headers: cached.headers }), 
+              response: new Response(buffer, { status: cached.status, headers }), 
               key, 
-              isHit: true 
+              isHit: true,
+              status: 'HIT' 
             };
           }
         }
@@ -128,10 +135,11 @@ export class GuardPipeline {
           ]);
           
           return { 
-            response: broadcaster.subscribe(), 
+            response: broadcaster.subscribe({ 'X-Quota-Guard': 'SHARED' }), 
             key, 
             isHit: true,
-            broadcaster
+            broadcaster,
+            status: 'SHARED'
           };
         }
 
@@ -142,7 +150,7 @@ export class GuardPipeline {
         });
         globalInFlightRegistry.set(key, broadcasterPromise, currentSnapshot);
 
-        return { key, resolveBroadcaster };
+        return { key, resolveBroadcaster, status: 'LIVE' };
       } finally {
         resolveLock!();
         if (this.urlLocks.get(lockKey) === currentLock) {

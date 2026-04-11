@@ -14,5 +14,10 @@ export const injectQuotaGuard = (config?: Partial<QuotaGuardConfig>) => {
 
   hookFetch();
   // eslint-disable-next-line no-console
-  console.log('[Quota Guard] Active.');
+  console.log(
+    `┌───────────────────────────────────────┐\n` +
+    `│ [Quota Guard] v1.8.0 READY            │\n` +
+    `│ Mode: ${process.env.NODE_ENV === 'production' ? 'Production (Bypass)' : 'Development (Guarded)'}        │\n` +
+    `└───────────────────────────────────────┘`
+  );
 };

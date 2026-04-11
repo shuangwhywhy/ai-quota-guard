@@ -17,9 +17,16 @@ export class ResponseBroadcaster {
   /**
    * Creates a new Response that will receive the stream in real-time.
    */
-  subscribe(): Response {
+  subscribe(extraHeaders?: Record<string, string>): Response {
     const noBodyStatuses = [101, 204, 205, 304];
     const canHaveBody = !noBodyStatuses.includes(this.originalResponse.status);
+    
+    const headers = new Headers(this.originalResponse.headers);
+    if (extraHeaders) {
+      for (const [k, v] of Object.entries(extraHeaders)) {
+        headers.set(k, v);
+      }
+    }
 
     if (this.isFinished) {
       let body: Uint8Array | null = null;
@@ -36,7 +43,7 @@ export class ResponseBroadcaster {
       return new Response(body as BodyInit | null, {
         status: this.originalResponse.status,
         statusText: this.originalResponse.statusText,
-        headers: this.originalResponse.headers
+        headers
       });
     }
 
@@ -65,7 +72,7 @@ export class ResponseBroadcaster {
     return new Response((canHaveBody ? stream : null) as BodyInit | null, {
       status: this.originalResponse.status,
       statusText: this.originalResponse.statusText,
-      headers: this.originalResponse.headers
+      headers
     });
   }
 

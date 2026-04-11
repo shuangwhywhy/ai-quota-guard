@@ -335,7 +335,7 @@ export const createFetchInterceptor = (nativeFetch: typeof globalThis.fetch) => 
           }
         })();
 
-        return broadcaster.subscribe();
+        return broadcaster.subscribe({ 'X-Quota-Guard': 'LIVE' });
       } catch {
         if (key) registry.delete(key);
         return response;

@@ -76,7 +76,7 @@ export const getDefaultConfig = (): QuotaGuardConfig => {
     debounceMs: 300,
     inFlightTimeoutMs: 60000,
     cacheKeyStrategy: 'intelligent',
-    intelligentFields: ['model', 'messages', 'prompt', 'system', 'contents', 'message'],
+    intelligentFields: ['model', 'messages', 'prompt', 'system', 'contents', 'message', 'response_format'],
     rules: [],
     keyHeaders: [],
     bypassCacheHeaders: ['cache-control', 'pragma', 'x-quota-guard-bypass'],
