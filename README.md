@@ -91,9 +91,52 @@ Quota Guard provides clear signals to confirm it is active:
 
 ---
 
-## ⚙️ Advanced Configuration
+## ⚙️ Multi-Environment Configuration
 
-You can customize the guard behavior by calling `injectQuotaGuard` manually or via a configuration file.
+Quota Guard supports sophisticated, zero-config environment isolation using standard configuration files. It automatically handles YAML, JSON, JS, and TS formats.
+
+### 1. Discovery Locations
+To keep your project clean, we support both root-level and directory-based configuration paths:
+
+| Style | Paths (Priority Order) |
+| :--- | :--- |
+| **Clean (Recommended)** | `.quota-guard/config.[env].[ext]` <br> `.quota-guard/config.[ext]` |
+| **Root** | `.quotaguardrc.[env].[ext]` <br> `.quotaguardrc.[ext]` |
+
+*Supported Extensions: `.ts`, `.js`, `.json`, `.yaml`, `.yml`*
+
+### 2. Environment Isolation
+Files matching the current `NODE_ENV` (e.g., `.quotaguardrc.production.yaml`) automatically override the base configuration.
+
+### 3. Merging Strategy (Zero Leaks)
+We use a standard deep-merging policy to ensure your environments stay separate:
+- **Primitives/Objects**: Deeply merged recursively.
+- **Arrays**: **REPLACED** entirely in environment-specific files. This ensures that a production file with 2 endpoints doesn't accidentally inherit 10 endpoints from a base file.
+
+### 4. Example: `.quotaguardrc.ts`
+Using TypeScript provides full autocompletion and allows for **Explicit Merging**:
+
+```typescript
+import { defineConfig } from '@shuangwhywhy/quota-guard';
+
+export default defineConfig({
+  enabled: true,
+  cacheTtlMs: 3600000,
+  aiEndpoints: ['api.openai.com'],
+  rules: [
+    {
+      match: { url: /v1\/chat/ },
+      override: { debounceMs: 500 }
+    }
+  ]
+});
+```
+
+---
+
+## 🔧 API Reference
+
+You can also customize the guard behavior by calling `injectQuotaGuard` manually. Programmatic options always take the highest priority.
 
 ```typescript
 import { injectQuotaGuard } from '@shuangwhywhy/quota-guard';

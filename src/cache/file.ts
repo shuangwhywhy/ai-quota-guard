@@ -1,6 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { ICacheAdapter, SerializedCacheEntry } from './memory';
+import { ICacheAdapter, SerializedCacheEntry } from './memory.js';
 
 export class FileCache implements ICacheAdapter {
   private cacheDir: string;

@@ -18,7 +18,7 @@ describe('Axios Browser Hook', { browser: true }, () => {
             req.onerror = resolve;
         });
 
-        injectQuotaGuard({
+        await injectQuotaGuard({
             enabled: true,
             aiEndpoints: ['openai.com'],
             debounceMs: 0

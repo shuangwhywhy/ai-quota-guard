@@ -1,12 +1,12 @@
-import { getConfig, AuditEvent, QuotaGuardConfig, QuotaGuardRule } from '../config';
-import { generateStableKey } from '../keys/normalizer';
-import { globalCache, RequestMetadata } from '../cache/memory';
-import { globalInFlightRegistry } from '../registry/in-flight';
-import { globalBreaker, CircuitBreakerError } from '../breaker/circuit-breaker';
-import { globalDebouncer } from '../utils/debounce-promise';
-import { base64ToBuffer } from '../utils/encoding';
+import { getConfig, AuditEvent, QuotaGuardConfig, QuotaGuardRule } from '../config.js';
+import { generateStableKey } from '../keys/normalizer.js';
+import { globalCache, RequestMetadata } from '../cache/memory.js';
+import { globalInFlightRegistry } from '../registry/in-flight.js';
+import { globalBreaker, CircuitBreakerError } from '../breaker/circuit-breaker.js';
+import { globalDebouncer } from '../utils/debounce-promise.js';
+import { base64ToBuffer } from '../utils/encoding.js';
 
-import { ResponseBroadcaster } from '../streams/broadcaster';
+import { ResponseBroadcaster } from '../streams/broadcaster.js';
 
 export interface GuardResult {
   response?: Response;

@@ -22,13 +22,13 @@ describe('Vite Plugin (quotaGuardPlugin)', () => {
       expect(nonMatching).toBeNull();
     });
 
-    it('loads the virtual module correctly', () => {
+    it('loads the virtual module correctly', async () => {
       // @ts-expect-error - testing virtual methods
       const plugin = quotaGuardPlugin();
-      const content = plugin.load('/@quota-guard/register');
+      const content = await plugin.load('/@quota-guard/register');
       expect(content).toContain('import "@shuangwhywhy/quota-guard/register"');
       
-      const nonMatching = plugin.load('other-module');
+      const nonMatching = await plugin.load('other-module');
       expect(nonMatching).toBeNull();
     });
 

@@ -1,4 +1,4 @@
-import { ICacheAdapter, SerializedCacheEntry } from './memory';
+import { ICacheAdapter, SerializedCacheEntry } from './memory.js';
 
 export class BrowserCache implements ICacheAdapter {
   private dbName = 'quota-guard-cache';

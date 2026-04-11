@@ -1,15 +1,15 @@
 import { BatchInterceptor, HttpRequestEventMap, Interceptor } from '@mswjs/interceptors';
 import { FetchInterceptor } from '@mswjs/interceptors/fetch';
 import { XMLHttpRequestInterceptor } from '@mswjs/interceptors/XMLHttpRequest';
-import { getConfig, type AuditEvent } from '../config';
-import { globalCache, type SerializedCacheEntry } from '../cache/memory';
-import { globalInFlightRegistry as registry } from '../registry/in-flight';
-import { globalBreaker, CircuitBreakerError } from '../breaker/circuit-breaker';
-import { GuardPipeline } from './pipeline';
-import { ResponseBroadcaster } from '../streams/broadcaster';
-import { bufferToBase64 } from '../utils/encoding';
+import { getConfig, type AuditEvent } from '../config.js';
+import { globalCache, type SerializedCacheEntry } from '../cache/memory.js';
+import { globalInFlightRegistry as registry } from '../registry/in-flight.js';
+import { globalBreaker, CircuitBreakerError } from '../breaker/circuit-breaker.js';
+import { GuardPipeline } from './pipeline.js';
+import { ResponseBroadcaster } from '../streams/broadcaster.js';
+import { bufferToBase64 } from '../utils/encoding.js';
 
-import { getMetadata, setMetadata } from './metadata';
+import { getMetadata, setMetadata } from './metadata.js';
 
 // Conditional import for Node-only interceptor to avoid browser bundling issues
 type ClientRequestInterceptorType = new () => Interceptor<HttpRequestEventMap>;

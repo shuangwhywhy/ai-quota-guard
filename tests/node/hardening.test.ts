@@ -33,26 +33,23 @@ vi.mock('fs/promises', async (importOriginal) => {
   });
 
   describe('setup.ts', () => {
-    it('handles production mode banner correctly', () => {
+    it('handles production mode banner correctly', async () => {
       const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'production';
       
-      injectQuotaGuard();
+      await injectQuotaGuard();
       
       expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Production (Bypass)'));
       process.env.NODE_ENV = originalEnv;
     });
 
-    it('loads config from window if available', () => {
+    it('loads config from window if available', async () => {
       vi.spyOn(console, 'log').mockImplementation(() => {});
       // @ts-expect-error - simulating browser environment
       globalThis.window = { __QUOTA_GUARD_CONFIG__: { debounceMs: 999 } };
       
-      injectQuotaGuard();
-      
-      // We check if hookFetch is called and config is applied
-      // (Config test is already covered elsewhere, focus on setup branch)
+      await injectQuotaGuard();
       
       // @ts-expect-error - cleanup
       delete globalThis.window;
@@ -259,12 +256,13 @@ vi.mock('fs/promises', async (importOriginal) => {
     });
 
     it('handles abort error in created interceptor', async () => {
-        const mockFetch = vi.fn().mockRejectedValue({ name: 'AbortError' });
+        const mockFetch = vi.fn().mockRejectedValue(new DOMException('Aborted', 'AbortError'));
         const guardedFetch = createFetchInterceptor(mockFetch);
         const logSpy = vi.fn();
         setConfig({ auditHandler: logSpy, aiEndpoints: [/openai/] });
         
         await expect(guardedFetch('https://api.openai.com/v1/chat', { method: 'POST', body: 'test' })).rejects.toBeDefined();
+        // The interceptor should catch AbortError and log it
         expect(logSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'request_aborted' }));
     });
 
@@ -375,8 +373,8 @@ vi.mock('fs/promises', async (importOriginal) => {
         globalBreaker.recordFailure('key2');
         const pipeline = new GuardPipeline(() => {});
         const req = new Request('https://api.openai.com/v1/chat', { method: 'POST', body: '{}' });
-        // Set low thresholds
-        setConfig({ globalBreakerMaxFailures: 1, aiEndpoints: [/openai/] });
+        // Set low thresholds and ensure ENABLED
+        setConfig({ enabled: true, globalBreakerMaxFailures: 1, aiEndpoints: [/openai/] });
         const res = await pipeline.processRequest(req);
         expect(res.status).toBe('BREAKER');
     });

@@ -8,11 +8,11 @@ describe('Setup & Lifecycle', () => {
     vi.restoreAllMocks();
   });
 
-  it('injectQuotaGuard sets config and calls hookFetch', () => {
+  it('injectQuotaGuard sets config and calls hookFetch', async () => {
     const hookSpy = vi.spyOn(interceptor, 'hookFetch').mockImplementation(() => {});
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     
-    injectQuotaGuard({
+    await injectQuotaGuard({
       debounceMs: 123
     });
     
@@ -21,11 +21,11 @@ describe('Setup & Lifecycle', () => {
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('READY'));
   });
 
-  it('injectQuotaGuard works without config argument', () => {
+  it('injectQuotaGuard works without config argument', async () => {
     const hookSpy = vi.spyOn(interceptor, 'hookFetch').mockImplementation(() => {});
     vi.spyOn(console, 'log').mockImplementation(() => {});
     
-    injectQuotaGuard();
+    await injectQuotaGuard();
     
     expect(hookSpy).toHaveBeenCalled();
   });

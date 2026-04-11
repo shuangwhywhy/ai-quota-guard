@@ -1,4 +1,4 @@
-import type { ICacheAdapter } from './cache/memory';
+import type { ICacheAdapter } from './cache/memory.js';
 
 export interface QuotaGuardRule {
   /** Matcher for the request. If it matches, the overrides are applied. */
@@ -91,3 +91,10 @@ export const setConfig = (overrides: Partial<QuotaGuardConfig>) => {
 };
 
 export const getConfig = (): QuotaGuardConfig => activeConfig;
+
+/**
+ * Helper to provide type safety and autocompletion for Quota Guard configuration.
+ */
+export function defineConfig(config: Partial<QuotaGuardConfig>): Partial<QuotaGuardConfig> {
+  return config;
+}
