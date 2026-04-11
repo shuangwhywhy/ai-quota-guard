@@ -3,7 +3,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'coverage/**', 'node_modules/**', 'example/vite-demo/dist/**'],
+    ignores: ['dist/**', 'coverage/**', 'node_modules/**', 'example/vite-demo/dist/**', 'docs/**'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,

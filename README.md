@@ -8,6 +8,10 @@
 
 ---
 
+## 📖 Documentation
+
+Visit our **[Interactive Documentation Site](file:///Users/yizhouqiang/MyProjects/AI/quota-guard/docs/index.html)** for a deep dive into configuration, features, and troubleshooting.
+
 ## ⚡️ Why Quota Guard?
 
 During development, UI re-renders, automatic effects, and repetitive debugging sessions can cause hundreds of identical LLM API calls. This leads to blown budgets, rate-limiting (`429 Too Many Requests`), and interrupted development high.

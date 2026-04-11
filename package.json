@@ -39,7 +39,8 @@
     "lint:fix": "eslint . --fix",
     "release": "dotenv -- release-it --ci",
     "release:interactive": "dotenv -- release-it",
-    "publish": "dotenv -- release-it --ci --no-increment --git.commit=false --git.tag=false --git.push=false"
+    "publish": "dotenv -- release-it --ci --no-increment --git.commit=false --git.tag=false --git.push=false",
+    "docs": "npx serve docs"
   },
   "keywords": [
     "ai",
