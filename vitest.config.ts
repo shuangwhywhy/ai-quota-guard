@@ -3,6 +3,7 @@ import { playwright } from '@vitest/browser-playwright';
 
 export default defineConfig({
   test: {
+    // Consolidated Projects for Node and Real Browser Environments
     projects: [
       {
         test: {
@@ -19,14 +20,14 @@ export default defineConfig({
           browser: {
             enabled: true,
             provider: playwright(),
-            api: {
-              host: '127.0.0.1',
-              port: 5555
-            },
             instances: [
               { browser: 'chromium' }
             ],
-            headless: true,
+            headless: true, // Set to false to see the browser during local runs
+            api: {
+              host: '127.0.0.1',
+              port: 63315 // Vitest default browser port
+            }
           }
         }
       }

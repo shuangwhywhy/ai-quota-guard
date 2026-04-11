@@ -216,9 +216,6 @@ export const hookFetch = () => {
   });
 
   batchInterceptor.apply();
-  
-  // eslint-disable-next-line no-console
-  console.log('[Quota Guard] Unified network guard active.');
 };
 
 export const unhookFetch = () => {
