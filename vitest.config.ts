@@ -42,6 +42,9 @@ export default defineConfig({
             '@mswjs/interceptors',
             '@mswjs/interceptors/fetch',
             '@mswjs/interceptors/XMLHttpRequest'
+          ],
+          exclude: [
+            '@mswjs/interceptors/ClientRequest'
           ]
         }
       }

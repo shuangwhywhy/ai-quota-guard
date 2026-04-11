@@ -19,9 +19,10 @@ const isNode = typeof process !== 'undefined' && process.versions && (process.ve
 
 if (isNode) {
   try {
-    // Statistically reachable require for most bundlers
+    // Dynamic specifier to hide this Node-only module from Vite's static scanner (esbuild)
+    const specifier = '@mswjs/interceptors/ClientRequest';
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mod = require('@mswjs/interceptors/ClientRequest');
+    const mod = require(specifier);
     ClientRequestInterceptor = mod.ClientRequestInterceptor;
   } catch (e) {
     // eslint-disable-next-line no-console
@@ -63,8 +64,9 @@ export const applyGlobalGuards = () => {
     } else {
       // Last resort retry with static string to help some bundlers
       try {
+        const specifier = '@mswjs/interceptors/ClientRequest';
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const mod = require('@mswjs/interceptors/ClientRequest');
+        const mod = require(specifier);
         if (mod && mod.ClientRequestInterceptor) {
           interceptors.push(new mod.ClientRequestInterceptor());
         }
