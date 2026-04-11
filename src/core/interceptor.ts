@@ -159,7 +159,6 @@ export const hookFetch = () => {
 
   });
 
-
   batchInterceptor.on('response', async ({ response, request }) => {
     const meta = getMetadata(request);
     const key = meta.key;

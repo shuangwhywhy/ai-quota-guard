@@ -41,6 +41,19 @@ describe('Quota Guard Hardening (Browser)', { browser: true }, () => {
     try { await cache2.clear(); } catch { /* ignore */ }
   });
 
+  it('triggers onupgradeneeded in browser', { timeout: 5000 }, async () => {
+    const dbName = 'quota-guard-upgrade-' + Date.now();
+    await new Promise((resolve) => {
+      const req = indexedDB.open(dbName, 1);
+      req.onsuccess = () => {
+        req.result.close();
+        const req2 = indexedDB.open(dbName, 2);
+        req2.onupgradeneeded = () => { resolve(true); };
+        req2.onsuccess = () => { req2.result.close(); };
+      };
+    });
+  });
+
   it('triggers XHR stream-to-buffer conversion', async () => {
     injectQuotaGuard({ enabled: true, aiEndpoints: ['xhr-detect.com'] });
     vi.stubGlobal('fetch', async () => new Response(new ReadableStream({

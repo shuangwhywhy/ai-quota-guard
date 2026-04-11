@@ -202,7 +202,17 @@ export class GuardPipeline {
     
     // Match URL
     if (match.url) {
-      const regex = match.url instanceof RegExp ? match.url : new RegExp(match.url);
+      let regex: RegExp;
+      if (match.url instanceof RegExp) {
+        regex = match.url;
+      } else {
+        const urlStr = String(match.url);
+        if (urlStr.startsWith('/') && urlStr.endsWith('/')) {
+          regex = new RegExp(urlStr.slice(1, -1));
+        } else {
+          regex = new RegExp(urlStr);
+        }
+      }
       if (!regex.test(urlStr)) return false;
     }
 
