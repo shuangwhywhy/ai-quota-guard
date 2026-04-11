@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.10.0](https://github.com/shuangwhywhy/ai-quota-guard/compare/v1.9.0...v1.10.0) (2026-04-11)
+
+### Features
+
+* add publish script to package.json for automated releases without version incrementing ([a8d5348](https://github.com/shuangwhywhy/ai-quota-guard/commit/a8d534890f035d87d0b1752aa759e83f7daeff2b))
+* add qg docs command to serve and open interactive documentation in the browser ([4d1bbce](https://github.com/shuangwhywhy/ai-quota-guard/commit/4d1bbce9a59390de42b25bc94a098c0dc28a3c20))
+* implement 5-level configuration hierarchy with file-based loading and deep merging for Vite and Node environments ([458958c](https://github.com/shuangwhywhy/ai-quota-guard/commit/458958cea160801ee8433402d2cb74d07bf19224))
+* implement CLI with init command and add corresponding test suite ([ecc73b6](https://github.com/shuangwhywhy/ai-quota-guard/commit/ecc73b6965cb9f6e66d36f08fc158f6f7ebde202))
+* implement interactive documentation site and add comprehensive guides for API, configuration, and diagnostics. ([eba3435](https://github.com/shuangwhywhy/ai-quota-guard/commit/eba34355ff12161744173ddd47e3ec375919102b))
+
 * refactor: improve URL regex matching in pipeline and expand test coverage for registry and browser hardening (e3b87ea)
 * test: add diagnostic header assertions, update lifecycle log expectation, and include response_format in semantic key normalization (667d80b)
 * docs: refactor README for improved clarity and update configuration documentation (738aab0)
