@@ -4,7 +4,8 @@ export default defineConfig({
   entry: {
     index: 'src/index.ts',
     register: 'src/register.ts',
-    vite: 'src/vite.ts'
+    vite: 'src/vite.ts',
+    cli: 'src/cli.ts'
   },
   format: ['cjs', 'esm'],
   dts: true,
@@ -12,5 +13,6 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   minify: false,
+  shims: true,
   external: ['vite'],
 });

@@ -84,79 +84,124 @@ Quota Guard provides clear signals to confirm it is active:
 
 ---
 
-## ⚙️ Multi-Environment Configuration
+---
 
-Quota Guard supports sophisticated, zero-config environment isolation using standard configuration files. It automatically handles YAML, JSON, JS, and TS formats.
+## 🛠 Command Line Interface (CLI)
+
+Quota Guard comes with a built-in CLI to help you get started quickly.
+
+```bash
+# Initialize a template configuration file
+npx qg init
+
+# Or using the full name
+npx quota-guard init
+```
+
+This creates a `.quotaguardrc.ts` file in your project root with best-practice defaults and examples.
+
+---
+
+## ⚙️ Configuration Guide
+
+Quota Guard supports a sophisticated configuration system. You can use `.ts`, `.js`, `.json`, or `.yaml` files.
 
 ### 1. Discovery Locations
-To keep your project clean, we support both root-level and directory-based configuration paths:
 
 | Style | Paths (Priority Order) |
 | :--- | :--- |
 | **Clean (Recommended)** | `.quota-guard/config.[env].[ext]` <br> `.quota-guard/config.[ext]` |
 | **Root** | `.quotaguardrc.[env].[ext]` <br> `.quotaguardrc.[ext]` |
 
-*Supported Extensions: `.ts`, `.js`, `.json`, `.yaml`, `.yml`*
+### 2. Core Options
 
-### 2. Environment Isolation
-Files matching the current `NODE_ENV` (e.g., `.quotaguardrc.production.yaml`) automatically override the base configuration.
+| Option | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `enabled` | `boolean` | `true` | If `false`, transparently passes all requests through. |
+| `aiEndpoints` | `(string\|RegExp)[]` | [Predefined] | Hostnames to intercept. |
+| `cacheTtlMs` | `number` | `3600000` | TTL for debug caching (1 hour). |
+| `cacheKeyStrategy` | `string\|fn` | `'intelligent'` | `'intelligent'` (strips noise like temperature) or `'exact'`. |
+| `debounceMs` | `number` | `300` | Aggregation window to merge identical parallel requests. |
+| `breakerMaxFailures`| `number` | `3` | Failures per specific prompt before blocking. |
+| `globalBreakerMaxFailures`| `number` | `10` | Total failures before blocking all AI traffic. |
+| `keyHeaders` | `string[]` | `[]` | Extra headers to include in the cache fingerprint. |
+| `bypassCacheHeaders` | `string[]` | `['x-quota-guard-bypass']` | Headers that trigger a cache bypass. |
 
-### 3. Merging Strategy (Zero Leaks)
-We use a standard deep-merging policy to ensure your environments stay separate:
-- **Primitives/Objects**: Deeply merged recursively.
-- **Arrays**: **REPLACED** entirely in environment-specific files. This ensures that a production file with 2 endpoints doesn't accidentally inherit 10 endpoints from a base file.
+---
 
-### 4. Example: `.quotaguardrc.ts`
-Using TypeScript provides full autocompletion and allows for **Explicit Merging**:
+## 🎯 Advanced Rules
+
+The `rules` array allows you to define granular behaviors for specific requests.
 
 ```typescript
-import { defineConfig } from '@shuangwhywhy/quota-guard';
+rules: [
+  {
+    // 1. Selector
+    match: {
+      url: /v1\/chat/,                // Match by URL regex
+      headers: { 
+        'x-org-id': 'research-lab'    // Match by specific header
+      }
+    },
+    // 2. Behavioral Override
+    override: {
+      cacheTtlMs: 86400000,           // Longer cache for this endpoint
+      debounceMs: 1000,               // More aggressive deduplication
+    }
+  }
+]
+```
 
-export default defineConfig({
-  enabled: true,
-  cacheTtlMs: 3600000,
-  aiEndpoints: ['api.openai.com'],
+### Rule Matching Logic
+- **URL**: Can be a string or a Regular Expression.
+- **Headers**: Key-value pairs where values can be strings or Regular Expressions.
+- **Overrides**: You can override almost any configuration field (except `rules` and `aiEndpoints`).
+
+---
+
+## 🍱 Configuration Recipes
+
+### Recipe: Aggressive Caching for Testing
+Useful for CI or UI component development where you want to hit the network as little as possible.
+
+```typescript
+export default {
+  cacheTtlMs: 1000 * 60 * 60 * 24 * 7, // 1 week
+  cacheKeyStrategy: 'intelligent',
+  debounceMs: 1000 // Large window for slow re-renders
+};
+```
+
+### Recipe: Bypassing Specific Models
+If you are testing real-time reasoning models and don't want caching for them.
+
+```typescript
+export default {
   rules: [
     {
-      match: { url: /v1\/chat/ },
-      override: { debounceMs: 500 }
+      match: { url: /gpt-4-0314/ },
+      override: { enabled: false }
     }
   ]
-});
+};
+```
+
+### Recipe: Custom Cache Adapter (Redis/FileSystem)
+By default, Quota Guard uses `IndexedDB` in the browser and `Memory` in Node. You can provide a custom adapter.
+
+```typescript
+import { FileCacheAdapter } from '@shuangwhywhy/quota-guard';
+
+export default {
+  cacheAdapter: new FileCacheAdapter('.quota-cache')
+};
 ```
 
 ---
 
-## 🔧 API Reference
-
-You can also customize the guard behavior by calling `injectQuotaGuard` manually. Programmatic options always take the highest priority.
-
-```typescript
-import { injectQuotaGuard } from '@shuangwhywhy/quota-guard';
-
-injectQuotaGuard({
-  aiEndpoints: [/api\.openai\.com/],
-  cacheTtlMs: 1000 * 60 * 60 * 24, // 1 day
-  auditHandler: (e) => console.log(`[Guard] ${e.type} -> ${e.key.slice(0, 8)}`)
-});
-```
-
-### Configuration Options
-
-| Option | Default | Description |
-| :--- | :--- | :--- |
-| `enabled` | `true` (dev) | If false, passes all requests through. |
-| `aiEndpoints` | [Predefined](#supported-providers) | List of hostnames (Strings or RegEx) to intercept. |
-| `cacheKeyStrategy` | `'intelligent'` | `'intelligent'` (strips noise) or `'exact'`. |
-| `cacheTtlMs` | `3600000` | Local cache duration (default: 1 hour). |
-| `debounceMs` | `300` | Aggregation window to group rapid requests. |
-| `breakerMaxFailures`| `3` | Failures per key before the breaker opens. |
-| `globalBreakerMaxFailures`| `10` | Global failures before blocking all AI calls. |
-| `intelligentFields` | [See Source] | Fields to include in the intelligent hash key. |
-
 ### Audit Event Types
 
-Use the `auditHandler` to subscribe to these real-time signals:
+Use the `auditHandler` to subscribe to these signals:
 
 | Event Type | Description |
 | :--- | :--- |
@@ -168,6 +213,7 @@ Use the `auditHandler` to subscribe to these real-time signals:
 | `breaker_opened` | Circuit breaker blocked the request. |
 | `request_failed` | Native request returned non-OK status. |
 | `request_aborted` | Request was cancelled by the user. |
+| `global_breaker_opened`| Global safety guard activated. |
 
 ---
 

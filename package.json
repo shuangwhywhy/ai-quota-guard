@@ -6,6 +6,10 @@
     "type": "git",
     "url": "git+https://github.com/shuangwhywhy/ai-quota-guard.git"
   },
+  "bin": {
+    "quota-guard": "./dist/cli.mjs",
+    "qg": "./dist/cli.mjs"
+  },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
