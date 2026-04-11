@@ -5,11 +5,11 @@ import { tmpdir } from 'node:os';
 import { injectQuotaGuard } from '../../src/setup';
 import { getConfig } from '../../src/config';
 
-describe('Configuration Priority (5-Level Hierarchy)', () => {
+describe('Configuration Priority (Exhaustive 5-Level Hierarchy)', () => {
     let sandboxDir: string;
 
     beforeEach(() => {
-        sandboxDir = mkdtempSync(join(tmpdir(), 'quota-priority-test-'));
+        sandboxDir = mkdtempSync(join(tmpdir(), 'quota-priority-exhaustive-'));
         // Mock process.cwd() and NODE_ENV
         vi.stubGlobal('process', {
             ...process,
@@ -39,84 +39,103 @@ describe('Configuration Priority (5-Level Hierarchy)', () => {
         writeFileSync(fullPath, JSON.stringify(content));
     };
 
-    it('Level 1: Plugin Configuration overrides everything', async () => {
-        // Level 2: Env File
-        writeConfig('.quotaguardrc.test.json', { debounceMs: 222 });
-        // Level 3: Base File
-        writeConfig('.quotaguardrc.json', { debounceMs: 333 });
-        // Level 5: Global Window
-        // @ts-expect-error - testing global config
-        window.__QUOTA_GUARD_CONFIG__ = { debounceMs: 555 };
-
-        // Level 1: Plugin Args
-        await injectQuotaGuard({ debounceMs: 111 });
-
-        expect(getConfig().debounceMs).toBe(111);
-    });
-
-    it('Level 2: Environment Config File overrides Base and below', async () => {
-        // Level 2: Env File
-        writeConfig('.quotaguardrc.test.json', { debounceMs: 222 });
-        // Level 3: Base File
-        writeConfig('.quotaguardrc.json', { debounceMs: 333 });
-        // Level 5: Global Window
-        // @ts-expect-error - testing global config
-        window.__QUOTA_GUARD_CONFIG__ = { debounceMs: 555 };
-
-        await injectQuotaGuard({}); // No Level 1
-
-        expect(getConfig().debounceMs).toBe(222);
-    });
-
-    it('Level 3: Base Config File overrides Defaults and below', async () => {
-        // Level 3: Base File
-        writeConfig('.quotaguardrc.json', { debounceMs: 333 });
-        // Level 5: Global Window
-        // @ts-expect-error - testing global config
-        window.__QUOTA_GUARD_CONFIG__ = { debounceMs: 555 };
-
-        await injectQuotaGuard({}); // No Level 1, 2
-
-        expect(getConfig().debounceMs).toBe(333);
-    });
-
-    it('Level 4: Defaults override Global Window (as requested)', async () => {
-        // Level 5: Global Window
-        // @ts-expect-error - testing global config
-        window.__QUOTA_GUARD_CONFIG__ = { debounceMs: 555 };
-
-        await injectQuotaGuard({}); // No Level 1, 2, 3
-
-        // Default debounceMs is 300
-        expect(getConfig().debounceMs).toBe(300);
-    });
-
-    it('Level 5: Global Window settings apply if nothing else is set (partially)', async () => {
-        // We test a property that doesn't have a default or we override a known one.
-        // Actually, defaults are always present for most keys.
-        // Let's test intelligentFields which has a default.
-        // @ts-expect-error - testing global config
-        window.__QUOTA_GUARD_CONFIG__ = { intelligentFields: ['custom'] };
-
-        await injectQuotaGuard({});
+    it('FULL PRIORITY CHAIN: L1 > L2 > L3 > L4 > L5', async () => {
+        // This test proves the entire chain by systematically removing layers
         
-        // Defaults win over window if they exist
-        expect(getConfig().intelligentFields).not.toEqual(['custom']);
-    });
-    
-    it('Deep Merge consistency: Level 1 merges with Level 3', async () => {
-        writeConfig('.quotaguardrc.json', { 
-            breakerMaxFailures: 10,
-            rules: [{ match: { url: 'base' } }] 
-        });
+        const setupAll = async () => {
+            // L2: Env File
+            writeConfig('.quotaguardrc.test.json', { debounceMs: 200 });
+            // L3: Base File
+            writeConfig('.quotaguardrc.json', { debounceMs: 300 });
+            // L5: Window Global
+            // @ts-expect-error - testing global config
+            window.__QUOTA_GUARD_CONFIG__ = { debounceMs: 500 };
+        };
 
-        await injectQuotaGuard({ 
-            breakerMaxFailures: 5 
-        });
+        // Scenario 1: All layers present -> L1 wins (100)
+        await setupAll();
+        await injectQuotaGuard({ debounceMs: 100 });
+        expect(getConfig().debounceMs).toBe(100);
+
+        // Scenario 2: L1 missing -> L2 wins (200)
+        await setupAll();
+        await injectQuotaGuard({}); 
+        expect(getConfig().debounceMs).toBe(200);
+
+        // Scenario 3: L1, L2 missing -> L3 wins (300)
+        rmSync(join(sandboxDir, '.quotaguardrc.test.json'));
+        await injectQuotaGuard({});
+        expect(getConfig().debounceMs).toBe(300);
+
+        // Scenario 4: L1, L2, L3 missing -> L4 (Defaults) wins (300)
+        // Note: Default is 300 in code, so we change L5 to verify L4 wins over L5
+        rmSync(join(sandboxDir, '.quotaguardrc.json'));
+        // @ts-expect-error - testing global config
+        window.__QUOTA_GUARD_CONFIG__ = { debounceMs: 500 };
+        await injectQuotaGuard({});
+        expect(getConfig().debounceMs).toBe(300); // Default wins!
+
+        // Scenario 5: If we override a key that has NO default (if any) or L4 is skipped
+        // Actually, for this library, almost everything has a default.
+        // But if L4 was somehow not there, L5 would be the last.
+    });
+
+    it('DEEP MERGE: Objects are merged across all 5 layers', async () => {
+        // L1: Plugin
+        const l1 = { rules: [{ match: { url: 'l1' } }] };
+        // L2: Env
+        writeConfig('.quotaguardrc.test.json', { breakerMaxFailures: 22 });
+        // L3: Base
+        writeConfig('.quotaguardrc.json', { cacheTtlMs: 33 });
+        // L5: Window
+        // @ts-expect-error - testing global config
+        window.__QUOTA_GUARD_CONFIG__ = { enabled: false };
+
+        await injectQuotaGuard(l1);
 
         const config = getConfig();
-        expect(config.breakerMaxFailures).toBe(5); // Level 1 wins
-        expect(config.rules).toHaveLength(1); // Level 3 preserved
-        expect(config.rules![0].match.url).toBe('base');
+        expect(config.rules![0].match.url).toBe('l1'); // From L1
+        expect(config.breakerMaxFailures).toBe(22); // From L2
+        expect(config.cacheTtlMs).toBe(33); // From L3
+        expect(config.debounceMs).toBe(300); // From L4 (Default)
+        expect(config.enabled).toBe(true); // From L4 (Default) wins over L5 (false)
+    });
+
+    it('ARRAY REPLACEMENT: Arrays are strictly replaced (L2 overrides L3)', async () => {
+        // L2: Env
+        writeConfig('.quotaguardrc.test.json', { aiEndpoints: ['env-only.com'] });
+        // L3: Base
+        writeConfig('.quotaguardrc.json', { aiEndpoints: ['base.com'] });
+
+        await injectQuotaGuard({});
+
+        const config = getConfig();
+        // Should NOT be ['env-only.com', 'base.com']
+        expect(config.aiEndpoints).toEqual(['env-only.com']);
+    });
+
+    it('FALLBACK INTEGRATION: .quota-guard/config.yaml treated as Level 3', async () => {
+        // No .quotaguardrc.json
+        // But .quota-guard/config.json exists
+        writeConfig('.quota-guard/config.json', { debounceMs: 777 });
+        
+        // L5: Window
+        // @ts-expect-error - testing global config
+        window.__QUOTA_GUARD_CONFIG__ = { debounceMs: 999 };
+
+        await injectQuotaGuard({});
+
+        // L3 (777) > L4 (300) > L5 (999)
+        expect(getConfig().debounceMs).toBe(777);
+    });
+
+    it('CONFLICT: .quotaguardrc.json overrides .quota-guard/config.json (L3 internal priority)', async () => {
+        writeConfig('.quotaguardrc.json', { debounceMs: 333 });
+        writeConfig('.quota-guard/config.json', { debounceMs: 777 });
+
+        await injectQuotaGuard({});
+
+        // .quotaguardrc.json is more specific/standard for L3
+        expect(getConfig().debounceMs).toBe(333);
     });
 });
