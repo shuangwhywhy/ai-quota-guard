@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'docs/**'
+  workflow_dispatch: # 启用手动触发
 
 jobs:
   sync:
