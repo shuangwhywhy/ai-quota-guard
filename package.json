@@ -1,7 +1,7 @@
 {
   "name": "@shuangwhywhy/quota-guard",
   "version": "1.8.0",
-  "description": "Zero-intrusion AI Call Guard and debug cost-saving kernel for model invocations",
+  "description": "Zero-Intrusive Engine for AI Cost Savings & Stability. Deduplicate, Cache, and Guard your LLM calls automatically.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/shuangwhywhy/ai-quota-guard.git"
@@ -44,12 +44,19 @@
   "keywords": [
     "ai",
     "llm",
+    "openai",
+    "anthropic",
+    "deepseek",
+    "gemini",
     "token",
     "rate-limit",
     "quota",
     "guard",
     "debug",
     "debug-mode",
+    "cache",
+    "caching",
+    "deduplication",
     "mock",
     "hook",
     "zero-intrusion",
