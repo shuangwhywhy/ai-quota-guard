@@ -24,7 +24,7 @@ export default tseslint.config(
   {
     files: ['tests/**/*.ts', 'example/**/*.ts', 'scratch/**/*.ts'],
     rules: {
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'error',
       'no-console': 'off',
     }
   }
