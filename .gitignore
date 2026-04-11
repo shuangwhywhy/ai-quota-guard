@@ -42,3 +42,6 @@ pids
 .env.production.local
 .npmrc
 
+
+# Environment variables
+.env

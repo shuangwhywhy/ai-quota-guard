@@ -38,3 +38,6 @@ pids/
 Thumbs.db
 .npmrc
 
+
+# Environment variables
+.env
