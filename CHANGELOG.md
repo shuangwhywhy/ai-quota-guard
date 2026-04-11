@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.9.0](https://github.com/shuangwhywhy/ai-quota-guard/compare/v1.8.0...v1.9.0) (2026-04-11)
+
+### Features
+
+* add response_format to intelligent fields and include X-Quota-Guard status headers in responses ([d29eada](https://github.com/shuangwhywhy/ai-quota-guard/commit/d29eadab6941d9eb97bb6f1be16786f4533039e6))
+
 ## [1.8.0](https://github.com/shuangwhywhy/ai-quota-guard/compare/v1.7.1...v1.8.0) (2026-04-11)
 
 ### Features
