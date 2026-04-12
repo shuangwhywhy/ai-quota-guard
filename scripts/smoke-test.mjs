@@ -17,7 +17,7 @@ async function runSmokeTest() {
   fs.writeFileSync(tempScript, "console.log('Main Script Execution'); setTimeout(() => {}, 200);");
 
   try {
-    const child = spawn('node', [cliPath, 'run', 'node', tempScript], {
+    const child = spawn('node', [cliPath, 'node', tempScript], {
       cwd: pkgRoot,
       stdio: 'pipe',
       shell: true,

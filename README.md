@@ -48,8 +48,9 @@ Works with ANY framework (Next.js, NestJS, Nuxt, Vite, etc.) by wrapping your co
 npx qg init
 
 # Wrap your dev server
-npx qg run npm run dev
-npx qg run npx next dev
+npx qg npm run dev
+npx qg next dev
+npx qg dev             # If "dev" is in your package.json
 ```
 
 #### 2. Manual Registration (Frontend/Bundlers)

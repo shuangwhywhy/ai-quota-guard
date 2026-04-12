@@ -6,30 +6,10 @@ import pkg from '../../package.json';
 import { main } from '../../src/cli.js';
 import { loadQuotaGuardConfig } from '../../src/loader.js';
 
-vi.mock('node:fs', async () => {
-    const actual = await vi.importActual('node:fs') as typeof fs;
-    return {
-        default: {
-            ...actual,
-            existsSync: vi.fn(),
-            writeFileSync: vi.fn(),
-            // Provide a default for the top-level readFileSync in src/cli.ts
-            readFileSync: vi.fn((pathStr: string) => {
-                if (pathStr.endsWith('package.json')) {
-                    return JSON.stringify({ version: pkg.version });
-                }
-                return actual.readFileSync(pathStr);
-            }),
-        }
-    };
-});
+// Get original fs to avoid recursion in spies
+const actualFs = await vi.importActual('node:fs') as typeof fs;
 
-vi.mock('node:child_process', () => ({
-    spawn: vi.fn(() => ({
-        on: vi.fn(),
-    })),
-}));
-
+// We mock the loader to avoid hitting the actual filesystem for config during tests
 vi.mock('../../src/loader.js', async () => {
     const actual = await vi.importActual('../../src/loader.js') as object;
     return {
@@ -40,6 +20,13 @@ vi.mock('../../src/loader.js', async () => {
         }),
     };
 });
+
+// Mock child_process.spawn
+vi.mock('node:child_process', () => ({
+    spawn: vi.fn(() => ({
+        on: vi.fn(),
+    })),
+}));
 
 describe('Quota Guard CLI', () => {
     const originalExit = process.exit;
@@ -54,13 +41,24 @@ describe('Quota Guard CLI', () => {
         mockExit = vi.fn() as unknown as Mock;
         mockLog = vi.fn();
         mockError = vi.fn();
-        // @ts-expect-error - mockExit is a Mock, but process.exit expects a specific function signature
+        // @ts-expect-error - mockExit is a Mock
         process.exit = mockExit;
         console.log = mockLog;
         console.error = mockError;
-        
-        // Mock readFileSync for package.json (needed for pkg.version)
-        vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({ version: pkg.version }));
+
+        // Use transparent spies to avoid breaking Vitest internal file resolution
+        vi.spyOn(fs, 'existsSync').mockImplementation((p) => {
+            // Default behavior for CLI tests: config doesn't exist
+            if (p.toString().includes('.quotaguardrc.ts')) return false;
+            return actualFs.existsSync(p);
+        });
+        vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
+        vi.spyOn(fs, 'readFileSync').mockImplementation((p) => {
+            if (p.toString().endsWith('package.json')) {
+                return JSON.stringify({ version: pkg.version });
+            }
+            return actualFs.readFileSync(p);
+        });
     });
 
     afterEach(() => {
@@ -68,12 +66,14 @@ describe('Quota Guard CLI', () => {
         console.log = originalLog;
         console.error = originalError;
         vi.clearAllMocks();
+        vi.restoreAllMocks();
     });
 
     it('shows help when no arguments provided', async () => {
         await main([]);
         expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('AI Quota Guard CLI'));
         expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('Usage:'));
+        expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('implicit run'));
     });
 
     it('shows help with help command', async () => {
@@ -87,14 +87,14 @@ describe('Quota Guard CLI', () => {
     });
 
     it('aborts init if file exists', async () => {
-        vi.mocked(fs.existsSync).mockReturnValue(true);
+        vi.spyOn(fs, 'existsSync').mockReturnValue(true);
         await main(['init']);
         expect(mockError).toHaveBeenCalledWith(expect.stringContaining('already exists'));
         expect(mockExit).toHaveBeenCalledWith(1);
     });
 
     it('successfully initializes config', async () => {
-        vi.mocked(fs.existsSync).mockReturnValue(false);
+        vi.spyOn(fs, 'existsSync').mockReturnValue(false);
         await main(['init'], '/tmp-test');
         expect(fs.writeFileSync).toHaveBeenCalledWith(
             path.join('/tmp-test', '.quotaguardrc.ts'),
@@ -105,21 +105,25 @@ describe('Quota Guard CLI', () => {
     });
 
     it('throws write errors during init', async () => {
-        vi.mocked(fs.existsSync).mockReturnValue(false);
-        vi.mocked(fs.writeFileSync).mockImplementation(() => {
+        vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+        vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {
             throw new Error('Disk full');
         });
         await expect(main(['init'])).rejects.toThrow('Disk full');
     });
 
-    it('warns about unknown commands', async () => {
-        await main(['invalid-cmd']);
-        expect(mockError).toHaveBeenCalledWith('Unknown command: invalid-cmd');
-        expect(mockExit).toHaveBeenCalledWith(1);
+    it('defaults to implicit run for unknown commands', async () => {
+        const mockSpawn = vi.mocked(spawn);
+        await main(['node', 'app.js']);
+        expect(mockSpawn).toHaveBeenCalled();
+        const [cmd, args] = mockSpawn.mock.calls[0];
+        expect(cmd).toBe('node');
+        expect(args).toEqual(['app.js']);
+        expect(loadQuotaGuardConfig).toHaveBeenCalled();
     });
 
-    describe('run command', () => {
-        it('aborts run if no command provided', async () => {
+    describe('run command and execution paths', () => {
+        it('aborts explicit run if no command provided', async () => {
             await main(['run']);
             expect(mockError).toHaveBeenCalledWith(expect.stringContaining('No command provided'));
             expect(mockExit).toHaveBeenCalledWith(1);
@@ -136,11 +140,10 @@ describe('Quota Guard CLI', () => {
             expect(cmd).toBe('node');
             expect(args).toEqual(['app.js']);
             
-            // Check Env Var
+            // Re-asserting all original details
             expect(options.env.QUOTA_GUARD_CONFIG).toContain('"enabled":true');
             expect(options.env.QUOTA_GUARD_CONFIG).toContain('"cacheTtlMs":5000');
             
-            // Check NODE_OPTIONS
             expect(options.env.NODE_OPTIONS).toContain('@shuangwhywhy/quota-guard/register');
             expect(options.env.NODE_OPTIONS).toMatch(/--import|--loader/);
             
@@ -185,10 +188,62 @@ describe('Quota Guard CLI', () => {
             vi.unstubAllGlobals();
         });
 
+        it('implicit run: successfully spawns unrecognized command', async () => {
+            const mockSpawn = vi.mocked(spawn);
+            await main(['node', 'script.js']);
+
+            expect(loadQuotaGuardConfig).toHaveBeenCalled();
+            expect(mockSpawn).toHaveBeenCalled();
+            const [cmd, args] = mockSpawn.mock.calls[0];
+            expect(cmd).toBe('node');
+            expect(args).toEqual(['script.js']);
+        });
+
+        it('implicit run: handles complex arguments and flags', async () => {
+            const mockSpawn = vi.mocked(spawn);
+            await main(['node', 'app.js', '--port', '3000', '--debug']);
+
+            expect(mockSpawn).toHaveBeenCalled();
+            const [cmd, args] = mockSpawn.mock.calls[0];
+            expect(cmd).toBe('node');
+            expect(args).toEqual(['app.js', '--port', '3000', '--debug']);
+        });
+
+        it('delimiter support: runs command after --', async () => {
+            const mockSpawn = vi.mocked(spawn);
+            await main(['--', 'node', 'test.js']);
+
+            expect(loadQuotaGuardConfig).toHaveBeenCalled();
+            expect(mockSpawn).toHaveBeenCalled();
+            const [cmd, args] = mockSpawn.mock.calls[0];
+            expect(cmd).toBe('node');
+            expect(args).toEqual(['test.js']);
+        });
+
+        it('script detection: automatically prepends npm run if in package.json', async () => {
+            const mockSpawn = vi.mocked(spawn);
+            
+            vi.spyOn(fs, 'existsSync').mockImplementation((p) => p.toString().endsWith('package.json'));
+            vi.spyOn(fs, 'readFileSync').mockImplementation((p) => {
+                if (p.toString().endsWith('package.json')) {
+                    return JSON.stringify({ scripts: { dev: 'vite' } });
+                }
+                return '';
+            });
+
+            await main(['dev', '--port', '8080']);
+
+            expect(loadQuotaGuardConfig).toHaveBeenCalled();
+            expect(mockSpawn).toHaveBeenCalled();
+            const [cmd, args] = mockSpawn.mock.calls[0];
+            expect(cmd).toBe('npm');
+            expect(args).toEqual(['run', 'dev', '--port', '8080']);
+        });
+
         it('forwards exit code from child processsink', async () => {
             const mockExitEvent = vi.fn();
             const mockChild = { on: mockExitEvent };
-            // @ts-expect-error - mockChild is a minimal mock of ChildProcess
+            // @ts-expect-error - mockChild is a minimal mock
             vi.mocked(spawn).mockReturnValue(mockChild);
 
             await main(['run', 'node', 'app.js']);
@@ -203,9 +258,9 @@ describe('Quota Guard CLI', () => {
     });
 
     it('handles thrown errors in catch block via isMain branch', async () => {
-        // Mock fs.writeFileSync to throw so that main() fails without an internal try-catch
-        vi.mocked(fs.existsSync).mockReturnValue(false);
-        vi.mocked(fs.writeFileSync).mockImplementation(() => {
+        // Mock fs.writeFileSync to throw so that main() fails
+        vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+        vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {
             throw new Error('Disk full');
         });
 
@@ -219,7 +274,7 @@ describe('Quota Guard CLI', () => {
             exit: mockExit,
         });
 
-        // Clear module cache to re-run top-level code
+        // Clear module cache and re-import to run top-level code
         vi.resetModules();
         await import('../../src/cli.js');
 

@@ -23,14 +23,15 @@ The easiest way to guard **any framework** (Next.js, Vite, NestJS, Nuxt, etc.) i
 npx qg init
 
 # 2. Wrap your start/dev command
-npx qg run npm run dev
-npx qg run npx next dev
-npx qg run node app.js
+npx qg npm run dev
+npx qg next dev
+npx qg dev             # Magic: calls "npm run dev" automatically
+npx qg node app.js     # Implicitly runs with Quota Guard
 ```
 
 ### Why use the CLI?
 - **Zero Code Stain**: No need to `import` anything in your business logic.
-- **Easy Cleanup**: Stop using it by just removing the `qg run` prefix.
+- **Easy Cleanup**: Stop using it by just removing the `qg` prefix.
 - **No Production Leakage**: Zero-stain architecture ensures no debug-only logic or mocks ever reach your business code or production environment.
 - **No Mocking Maintenance**: Get the speed and cost of local mocks without the headache of writing and updating mock files.
 - **Node-native**: Use the latest `--import` or `--require` hooks automatically.
