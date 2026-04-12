@@ -52,12 +52,12 @@ export default {
 
 ---
 
-## ✅ Is It Working? (Active Signals)
+## 🔍 Observability & Verification
 
-Quota Guard provides clear signals to confirm it is active:
+Quota Guard provides clear signals to confirm its active state and health:
 
-1.  **Startup Banner**: Look for the `[Quota Guard] READY` banner in your terminal or console.
-2.  **Network Headers**: All guarded responses carry an `X-Quota-Guard` status in your **Network Tab** (`HIT`, `SHARED`, `LIVE`, `BYPASS`).
+1.  **Startup Banner**: Upon initialization, a `[Quota Guard] READY` banner appears in your terminal or browser console.
+2.  **Network Insight**: Every intercepted response includes the `X-Quota-Guard` header in your **Network Tab**, indicating its status (`HIT`, `SHARED`, `LIVE`, or `BYPASS`).
 
 ---
 

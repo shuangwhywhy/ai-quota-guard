@@ -64,9 +64,9 @@ export default defineConfig({
 
 ---
 
-## 4. Interaction & Verification
+## 4. Observability & Verification
 
-Once setup, look for these signals to confirm Quota Guard is active:
+Quota Guard ensures total visibility into its operation through the following signals:
 
 ### The Startup Banner
 You should see a clear banner in your terminal (Node.js) or browser console (Vite):
