@@ -44,6 +44,7 @@
     "test:smoke": "node scripts/smoke-test.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "pre-release:gate": "node scripts/pre-release-gate.mjs",
     "release": "dotenv -- release-it --ci",
     "release:interactive": "dotenv -- release-it",
     "release:only-publish": "dotenv -- release-it --ci --no-increment --git.commit=false --git.tag=false --git.push=false",

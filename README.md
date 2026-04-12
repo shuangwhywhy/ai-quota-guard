@@ -6,20 +6,41 @@
 [![NPM Version](https://img.shields.io/npm/v/@shuangwhywhy/quota-guard.svg)](https://www.npmjs.com/package/@shuangwhywhy/quota-guard)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
----
+### ❓ Why Quota Guard?
 
-### ⚖️ The Optimal Balance for AI Development
+Modern AI development is noisy and expensive. Framework artifacts like **Vite HMR** and **React StrictMode** can trigger hundreds of redundant LLM API calls during a single debug session. One logic error in a loop can drain a weekly quota in minutes.
 
-Quota Guard is the only development-time AI firewall that achieves the **"Perfect Balance"** between developer productivity, cost control, and architectural purity.
+Quota Guard provides an **Optimal Balance** between developer productivity, cost control, and architectural purity through its 7 core pillars:
 
-#### 🏗️ The 7 Pillars of the Guard
+#### 🏗️ The 7 Pillars of Balance
 1.  **Zero-Intrusive Adoption**: Plug-and-play as a transparent wrapper. No SDK swaps, no logic pollution, and zero footprint in your business code.
-2.  **Universal Compatibility**: Framework-agnostic at its core. Whether it's Next.js, Vite, or a raw Node server, one command (`npx qg`) covers every stack with zero per-project adapters.
+2.  **Universal Compatibility**: Framework-agnostic by design. Whether it's Next.js, Vite, or a raw Node server, one command (`npx qg`) covers every stack with zero per-project adapters.
 3.  **Intelligent Guarding, Not "Dumb Mocks"**: The middle ground. It silences framework noise (HMR, re-renders) but allows real requests when you need them. Debug with mock speed and LLM truth.
 4.  **Zero Infrastructure Burden**: No local proxy servers, no Docker containers, and no extra processes. A lightweight, in-process engine that adds zero system pressure.
 5.  **Production-Hardened Safety**: Built-in environment isolation. The guard is physically incapable of active interception in production, eliminating all risk of leakage.
-6.  **Team-Scale Portability**: Seamlessly portable across environments. Config is project-scoped and versioned—new team members are "protected" the moment they `git clone`.
+6.  **Team-Scale Portability**: Seamlessly portable across environments. Config is project-scoped and versioned—new team members are protected the moment they `git clone`.
 7.  **Controlled Flexibility**: Break-glass escape hatches are standard. Break default limits for critical truth-seeking requests without dismantling your safety net.
+
+---
+
+### 🚫 Why existing solutions are not enough?
+
+Existing solutions often force a trade-off that compromises either the codebase or the development experience:
+- **Production Gateways** (e.g., LiteLLM, Portkey) are designed for high-concurrency routing and are too heavy for local dev. They don't understand the "noise" of a hot-reloading DevServer.
+- **Native Prompt Caching** is effective for stable prompts but doesn't stop accidental infinite loops or redundant IDE-induced calls.
+- **Manual Mocking** creates brittle, code-staining `if (process.env.DEV)` blocks and static JSON files that are difficult to scale and maintain.
+
+#### ⚖️ Comparison
+
+| Dimension | **AI Quota Guard** | Native Prompt Caching | AI Gateways | Semantic Cache | Manual Mocking |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Primary Goal** | **Dev-time Guard** | Cost / Performance | Governance / Proxy | Similarity Reuse | One-off Testing |
+| **Intrusion** | **Zero (CLI / Runtime)** | Low (Arg change) | High (Endpoint change) | High (SDK change) | High (Code changes) |
+| **Dev Focus** | **Yes (Exclusive)** | No | No | No | Partial |
+| **Loop Protection**| **Active Fuse** | No | Basic Rate Limit | No | No |
+| **HMR Deduplication**| **Yes (Native)** | No | No | No | Manual |
+| **Env Safety** | **Strict (Auto-Bypass)** | No | Limited | No | Manual |
+| **Infra Burden** | **Zero (In-Process)** | Zero | High (Proxy/Docker) | Medium (Client) | Zero |
 
 ---
 
@@ -33,23 +54,9 @@ To maintain its "Zero-Intrusive" promise and developer-first focus, Quota Guard 
 
 ---
 
-### ❓ Why Quota Guard?
+### 🚀 Quick Start (CLI)
 
-Modern AI development is noisy and expensive. Framework artifacts like **Vite HMR** and **React StrictMode** can trigger hundreds of redundant LLM API calls during a single debug session. One logic error in a loop can drain a weekly quota in minutes.
-
-Existing solutions forced a trade-off:
-- **Production Gateways** are too heavy and ignore dev-server noise.
-- **Provider Caching** doesn't stop accidental loops or redundant IDE-induced calls.
-- **Manual Mocking** creates brittle, code-staining `if (dev)` blocks that are hard to scale.
-
-**Quota Guard is the only solution that protects your budget without touching your code or adding infrastructure.**
-
-### 🚀 Quick Start
-
-The most flexible way to use Quota Guard is via its **Framework-Agnostic** CLI.
-
-#### 1. Unified CLI (Recommended for Node.js)
-Works with ANY framework (Next.js, NestJS, Nuxt, Vite, etc.) by wrapping your command.
+The recommended way to use Quota Guard is via the **CLI runner**. This approach requires **zero code changes** to your application and provides the cleanest developer experience.
 
 ```bash
 # Initialize config (once)
@@ -58,31 +65,21 @@ npx qg init
 # Wrap your dev server
 npx qg npm run dev
 npx qg next dev
-npx qg dev             # If "dev" is in your package.json
+npx qg dev             # Automatically detects your dev script
 ```
 
-#### 2. Manual Registration (Frontend/Bundlers)
-For non-Vite projects or if you prefer explicit code injection, add this to the very top of your application entry point (e.g., `main.ts` or `app/layout.tsx`).
+> [!TIP]
+> **No Code Changes Required**: Using the `qg` CLI prefix automatically injects the firewall into your process without needing any `import` or configuration changes in your source code.
 
-```typescript
-import '@shuangwhywhy/quota-guard/register';
-```
-
-#### 3. Vite Plugin (Convenience)
-```typescript
-import { quotaGuardPlugin } from '@shuangwhywhy/quota-guard/vite';
-
-export default {
-  plugins: [quotaGuardPlugin()]
-};
-```
+#### Optional: Manual & Plugin Setup
+If you prefer not to use the CLI, you can use the [Vite Plugin](./docs/getting-started.md#3-the-frontend-path-vite) or [Manual Registration](./docs/getting-started.md#4-the-manual-path-entry-point). These are optional alternatives for specific integration needs.
 
 ---
 
 ### 📖 Use Cases
 
 #### 1. The HMR & StrictMode Multiplier
-React `StrictMode` and Vite HMR often cause components to mount twice or re-trigger effects. Quota Guard catches these at the network level. No matter how many times your component refreshes, identical prompts within a short window only cost you **one** request.
+React `StrictMode` and Vite HMR often cause components to mount twice or re-trigger effects. Quota Guard catches these at the network level. No matter how many times your component refreshes, identical prompts within a short window only cost you a single request.
 
 #### 2. Workflow-First Debugging
 When debugging a long business chain (e.g., *Analyze Text -> Save DB -> Send Email*), you rarely care about the AI's creative output quality. Quota Guard caches the response locally so you can iterate on your business logic 100 times while only hitting the API once.
@@ -92,29 +89,6 @@ Writing an Agent loop or a tricky `useEffect`? One hand-off error can trigger a 
 
 #### 4. Total Environment Isolation
 Keep your debug logic out of your production bundle. Because we use network-level interception, there's no `if (process.env.DEV)` scattered through your business code.
-
----
-
-### ⚖️ Comparison
-
-To understand the ecosystem:
-- **Native Prompt Caching**: Provider-side cost/performance reuse for stable prompts.
-- **AI Gateways**: Production-grade routing, logging, and centralized governance.
-- **Semantic Caches**: Shared response reuse based on similarity retrieval.
-- **Manual Mocks**: Hard-to-maintain mocks that often pollute business logic.
-- **Quota Guard**: Development-time protection against meaningless or redundant AI calls.
-
-It is **additive** to production tools, not a replacement for them.
-
-| Dimension | **AI Quota Guard** | Native Prompt Caching | AI Gateways | Semantic Cache | Manual Mocking |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Primary Goal** | **Dev-time Guard** | Cost / Performance | Governance / Proxy | Similarity Reuse | One-off Testing |
-| **Intrusion** | **Zero (CLI / Runtime)** | Low (Arg change) | High (Endpoint change) | High (SDK change) | High (Code changes) |
-| **Dev Focus** | **Yes (Exclusive)** | No | No | No | Partial |
-| **Loop Protection**| **Active Fuse** | No | Basic Rate Limit | No | No |
-| **HMR Deduplication**| **Yes (Native)** | No | No | No | Manual |
-| **Env Safety** | **Strict (Auto-Bypass)** | No | Limited | No | Manual |
-| **Infra Burden** | **Zero (In-Process)** | Zero | High (Proxy/Docker) | Medium (Client) | Zero |
 
 ---
 

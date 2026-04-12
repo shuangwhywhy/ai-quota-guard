@@ -17,6 +17,7 @@
     }
   },
   "hooks": {
+    "before:init": "npm run pre-release:gate",
     "after:bump": "node scripts/update-docs-version.mjs ${version} && git add docs/"
   }
 }

@@ -2,8 +2,17 @@ import { setConfig, QuotaGuardConfig } from './config.js';
 import { applyGlobalGuards } from './core/interceptor.js';
 
 export const injectQuotaGuard = async (config?: Partial<QuotaGuardConfig> & { configPath?: string }) => {
+  const isProd = typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'production';
+
   // 0. Production Safety Check: Absolutely no-op in production to prevent performance or security leakage.
-  if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'production') {
+  if (isProd) {
+    // eslint-disable-next-line no-console
+    console.log(
+      `┌───────────────────────────────────────┐\n` +
+      `│ [Quota Guard] v${typeof PKG_VERSION !== 'undefined' ? PKG_VERSION : '?.?.?'} READY            │\n` +
+      `│ Mode: Production (Bypass)             │\n` +
+      `└───────────────────────────────────────┘`
+    );
     return;
   }
 
@@ -75,7 +84,7 @@ export const injectQuotaGuard = async (config?: Partial<QuotaGuardConfig> & { co
   console.log(
     `┌───────────────────────────────────────┐\n` +
     `│ [Quota Guard] v${typeof PKG_VERSION !== 'undefined' ? PKG_VERSION : '?.?.?'} READY            │\n` +
-    `│ Mode: ${process.env.NODE_ENV === 'production' ? 'Production (Bypass)' : 'Development (Guarded)'}        │\n` +
+    `│ Mode: Development (Guarded)           │\n` +
     `└───────────────────────────────────────┘`
   );
 };
