@@ -1,6 +1,6 @@
-# Core Scenarios & Recipes
+# Scenarios & Recipes
 
-Practical examples of how AI Quota Guard protects your development workflow.
+Practical examples of how Quota Guard protects your **individual development loop** from meaningless AI calls.
 
 ---
 

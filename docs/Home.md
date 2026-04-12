@@ -8,7 +8,7 @@
 
 Quota Guard is the "surge protector" for AI developers. 
 
-Unlike traditional SDK wrappers or observability platforms, we focus on the **individual developer loop**. We believe that development-time requests — like those caused by your framework re-rendering or hot-reloading — should be virtually free. 
+Unlike traditional SDK wrappers or observability platforms, we focus on the **individual developer loop**. Crucially, Quota Guard is built for development-time protection, not production-time optimization. We ensure that framework-induced requests — like those caused by HMR or re-rendering — never hit your API balance.
 
 - **Zero-Intrusion**: No code changes. No SDK wrappers. Just plug and play.
 - **Budget Protection**: Save tokens from hot-reloads, re-renders, and "noise."
