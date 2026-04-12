@@ -1,6 +1,6 @@
 {
   "name": "@shuangwhywhy/quota-guard",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Zero-Intrusive Engine for AI Cost Savings & Stability. Deduplicate, Cache, and Guard your LLM calls automatically.",
   "repository": {
     "type": "git",
