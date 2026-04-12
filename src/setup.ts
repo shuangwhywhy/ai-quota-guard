@@ -3,7 +3,7 @@ import { applyGlobalGuards } from './core/interceptor.js';
 
 export const injectQuotaGuard = async (config?: Partial<QuotaGuardConfig> & { configPath?: string }) => {
   // 0. Hook immediately to prevent race conditions during async config loading
-  applyGlobalGuards();
+  await applyGlobalGuards();
 
   let fileConfig: { base: Partial<QuotaGuardConfig>, specific: Partial<QuotaGuardConfig> } = { base: {}, specific: {} };
   let envVarConfig: Partial<QuotaGuardConfig> = {};

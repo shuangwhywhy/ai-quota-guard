@@ -5,7 +5,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { injectQuotaGuard, removeGlobalGuards } from '../../src/index';
 
 describe('XMLHttpRequest Interception', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
         // Mock global fetch for handleRequest
         globalThis.fetch = vi.fn().mockImplementation(async () => {
             return new Response(JSON.stringify({ choices: [{ message: { content: 'Hello from mock fetch' } }] }), {
@@ -14,7 +14,7 @@ describe('XMLHttpRequest Interception', () => {
             });
         });
         
-        injectQuotaGuard({
+        await injectQuotaGuard({
             enabled: true,
             aiEndpoints: ['api.openai.com'],
             cacheTtlMs: 1000,
@@ -31,7 +31,7 @@ describe('XMLHttpRequest Interception', () => {
         const body = JSON.stringify({ model: 'gpt-4', messages: [] });
         
         // Pre-warm the cache to avoid any network calls
-        injectQuotaGuard({
+        await injectQuotaGuard({
             enabled: true,
             aiEndpoints: ['api.openai.com'],
             cacheKeyStrategy: 'intelligent'

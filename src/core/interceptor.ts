@@ -17,19 +17,6 @@ type ClientRequestInterceptorType = new () => Interceptor<HttpRequestEventMap>;
 let ClientRequestInterceptor: ClientRequestInterceptorType | null = null;
 const isNode = typeof process !== 'undefined' && process.versions && (process.versions as Record<string, string>).node;
 
-if (isNode) {
-  try {
-    // Dynamic specifier to hide this Node-only module from Vite's static scanner (esbuild)
-    const specifier = '@mswjs/interceptors/ClientRequest';
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const mod = require(specifier);
-    ClientRequestInterceptor = mod.ClientRequestInterceptor;
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.warn('[Quota Guard] Failed to load Node.js ClientRequestInterceptor:', e);
-  }
-}
-
 let batchInterceptor: BatchInterceptor<Interceptor<HttpRequestEventMap>[]> | null = null;
 
 const emitAudit = (event: AuditEvent) => {
@@ -43,37 +30,40 @@ const emitAudit = (event: AuditEvent) => {
 
 const pipeline = new GuardPipeline(emitAudit);
 
-// Removed local bufferToBase64, now imported from utils
-
 /**
  * Global Network Interceptor: Passively catch and manage all traffic (Fetch & XHR).
  * This provides a solid custody over requests without library-specific preferences.
  */
-export const applyGlobalGuards = () => {
+export const applyGlobalGuards = async () => {
   if (batchInterceptor) return;
+
+  // 1. Load Node-only interceptor if in Node environment
+  if (isNode && !ClientRequestInterceptor) {
+    try {
+      // Use await import() to support both ESM and CJS safely.
+      // This bypasses the "Dynamic require is not supported" error in ESM bundles.
+      const mod = await import('@mswjs/interceptors/ClientRequest');
+      if (mod && mod.ClientRequestInterceptor) {
+        ClientRequestInterceptor = mod.ClientRequestInterceptor;
+      }
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('[Quota Guard] Failed to load Node.js ClientRequestInterceptor:', e);
+    }
+  }
 
   const interceptors: Interceptor<HttpRequestEventMap>[] = [
     new FetchInterceptor(),
     new XMLHttpRequestInterceptor(),
   ];
 
-  // Robust Node Interceptor Injection
+  // 2. Inject Node Interceptor if available
   if (isNode) {
     if (ClientRequestInterceptor) {
       interceptors.push(new ClientRequestInterceptor());
     } else {
-      // Last resort retry with static string to help some bundlers
-      try {
-        const specifier = '@mswjs/interceptors/ClientRequest';
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const mod = require(specifier);
-        if (mod && mod.ClientRequestInterceptor) {
-          interceptors.push(new mod.ClientRequestInterceptor());
-        }
-      } catch {
         // eslint-disable-next-line no-console
         console.warn('[Quota Guard] Node.js bridge unavailable. Native http/https requests might be unguarded.');
-      }
     }
   }
 

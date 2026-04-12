@@ -55,7 +55,10 @@ describe('Quota Guard Hardening (Browser)', { browser: true }, () => {
   });
 
   it('triggers XHR stream-to-buffer conversion', async () => {
-    injectQuotaGuard({ enabled: true, aiEndpoints: ['xhr-detect.com'] });
+    await injectQuotaGuard({
+        enabled: true,
+        aiEndpoints: ['xhr-detect.com']
+    });
     vi.stubGlobal('fetch', async () => new Response(new ReadableStream({
         start(controller) {
           controller.enqueue(new TextEncoder().encode('xhr-data'));

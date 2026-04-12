@@ -30,7 +30,7 @@ describe('Full Integration Lifecycle', () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = mockNativeFetch;
 
-    QuotaGuard.injectQuotaGuard({ enabled: true, aiEndpoints: ['api.openai.com'] });
+    await QuotaGuard.injectQuotaGuard({ enabled: true, aiEndpoints: ['api.openai.com'] });
     expect(globalThis.fetch).not.toBe(mockNativeFetch);
 
     await globalThis.fetch('https://api.openai.com/v1/models');
@@ -49,7 +49,7 @@ describe('Full Integration Lifecycle', () => {
     });
 
     QuotaGuard.removeGlobalGuards();
-    QuotaGuard.injectQuotaGuard({ enabled: true, aiEndpoints: ['api.openai.com'] });
+    await QuotaGuard.injectQuotaGuard({ enabled: true, aiEndpoints: ['api.openai.com'] });
 
     // In Vitest/Node, we use http.request to ensure we trip the ClientRequestInterceptor
     // We use a local hostname to avoid real network calls if interception fails

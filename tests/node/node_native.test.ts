@@ -27,9 +27,7 @@ describe('Node.js Native Interception (Pure Node)', () => {
     });
 
     removeGlobalGuards();
-    applyGlobalGuards();
-    // Small delay to ensure interceptors are applied in the environment
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await applyGlobalGuards();
   });
 
   afterEach(() => {
@@ -66,8 +64,10 @@ describe('Node.js Native Interception (Pure Node)', () => {
 
     const result = await responsePromise;
     
-    // Diagnostic: check if http.request is patched
-    console.log('[Test Debug] http.request is patched:', http.request.toString().includes('interceptor') || http.request.toString().includes('bound'));
+    // Diagnostic: check if http.request is patched (native code usually doesn't show 'interceptor')
+    const requestStr = http.request.toString();
+    const isPatched = requestStr.includes('interceptor') || requestStr.includes('apply') || !requestStr.includes('[native code]');
+    console.log('[Test Debug] http.request is patched:', isPatched);
     expect(result.status).toBe(200);
     expect(JSON.parse(result.body).node).toBe('native-success');
     

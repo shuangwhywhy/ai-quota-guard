@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
+import path from 'path';
 import pkg from './package.json';
 
 export default defineConfig({
@@ -19,6 +20,11 @@ export default defineConfig({
       },
       {
         name: 'browser',
+        resolve: {
+          alias: {
+            '@mswjs/interceptors/ClientRequest': path.resolve(__dirname, 'src/core/interceptor.browser.stub.ts')
+          }
+        },
         define: {
           PKG_VERSION: JSON.stringify(pkg.version),
         },

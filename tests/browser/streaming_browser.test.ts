@@ -29,7 +29,7 @@ describe('Streaming Interception (Browser)', { browser: true }, () => {
             req.onerror = resolve;
         });
 
-        injectQuotaGuard({
+        await injectQuotaGuard({
             enabled: true,
             aiEndpoints: ['api.openai.com'],
             debounceMs: 0
