@@ -9,10 +9,13 @@ Quota Guard searches for configuration in the following order of priority (1 = h
 | Level | Priority | Type | Description |
 | :--- | :--- | :--- | :--- |
 | **1** | **Highest** | **Code** | Passed directly to `injectQuotaGuard({...})`. |
-| **2** | **Project Root** | **Config File** | `.quotaguardrc.[ext]` in the current working directory. |
-| **3** | **Internal Dir** | **Project Spec** | `.quota-guard/config.[ext]` inside the repository. |
-| **4** | **Global** | **User Home** | `~/.quotaguardrc.[ext]` for system-wide defaults. |
-| **5** | **Lowest** | **Embedded** | Built-in fallback settings. |
+| **2** | **Env-Specific** | **Project Root** | `.quotaguardrc.[envName].[ext]` (e.g., `.quotaguardrc.production.ts`) |
+| **3** | **Project Base** | **Project Root** | `.quotaguardrc.[ext]` or `package.json` (via `quotaguard` key). |
+| **4** | **Fallback Dir** | **Internal Dir** | `.quota-guard/config.[ext]` inside the repository root. |
+| **5** | **Lowest** | **Embedded** | Built-in fallback settings defined in the library. |
+
+> [!NOTE]
+> Environment-specific files (`Level 2`) are only loaded if `process.env.NODE_ENV` (or a custom env passed to the loader) matches the file suffix.
 
 ---
 
@@ -25,8 +28,8 @@ Quota Guard searches for configuration in the following order of priority (1 = h
 
 ### `aiEndpoints`
 - **Type**: `(string | RegExp)[]`
-- **Default**: Covers OpenAI, Anthropic, Gemini, DeepSeek, etc. (See [registry.ts](../src/providers/registry.ts))
-- **Description**: A list of hostnames to intercept. Use regex for local proxies like `localhost:11434`.
+- **Default**: Covers OpenAI, Anthropic, Gemini, DeepSeek, Google AI, Mistral, and many more. (See `DEFAULT_AI_ENDPOINTS`)
+- **Description**: A list of hostnames to intercept. Use regex for local proxies like `localhost:11434` (Ollama).
 
 ### `cacheTtlMs`
 - **Type**: `number`
@@ -36,7 +39,7 @@ Quota Guard searches for configuration in the following order of priority (1 = h
 ### `debounceMs`
 - **Type**: `number`
 - **Default**: `300`
-- **Description**: The "Gathering Window". If two identical requests occur within this window, the second one will wait and share the result of the first, instead of hitting the network.
+- **Description**: The "Gathering Window". If two identical requests occur within this window, the second one will wait and share the result of the first.
 
 ### `breakerMaxFailures`
 - **Type**: `number`

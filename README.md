@@ -10,20 +10,13 @@
 
 ## 📖 Documentation
 
-The most comprehensive documentation is available through our **Interactive Documentation Hub**. 
-
-```bash
-# Start the interactive documentation center
-npx qg docs
-```
-
-Or view it [Locally](./docs/index.html) or via [GitHub Wiki](https://github.com/shuangwhywhy/ai-quota-guard/wiki).
+The most comprehensive documentation is available through our **[GitHub Wiki](https://github.com/shuangwhywhy/ai-quota-guard/wiki)**.
 
 ---
 
 ## ⚡️ Why Quota Guard?
 
-During development, UI re-renders, automatic effects, and repetitive debugging sessions can cause hundreds of identical LLM API calls. This leads to blown budgets, rate-limiting (`429 Too Many Requests`), and interrupted development high.
+During development, UI re-renders, automatic effects, and repetitive debugging sessions can cause hundreds of identical LLM API calls. This leads to blown budgets, rate-limiting (`429 Too Many Requests`), and interrupted development.
 
 AI Quota Guard is a **zero-preference, zero-intrusion engine** that seamlessly intercepts network calls — specifically those bound for AI endpoints.
 
@@ -64,18 +57,18 @@ export default {
 Quota Guard provides clear signals to confirm it is active:
 
 1.  **Startup Banner**: Look for the `[Quota Guard] READY` banner in your terminal or console.
-2.  **Network Headers**: All guarded responses carry an `X-Quota-Guard` status in your **Network Tab** (`HIT`, `SHARED`, `LIVE`).
+2.  **Network Headers**: All guarded responses carry an `X-Quota-Guard` status in your **Network Tab** (`HIT`, `SHARED`, `LIVE`, `BYPASS`).
 
 ---
 
 ## 🛠 Command Line Interface (CLI)
 
 ```bash
-# Initialize a template configuration file
+# Initialize a template configuration file (.quotaguardrc.json)
 npx qg init
 
-# Open the documentation center
-npx qg docs
+# Check installed version
+npx qg version
 ```
 
 ---

@@ -9,19 +9,38 @@ Unlike traditional SDK wrappers or monkey-patching libraries, Quota Guard functi
 - **No Code Changes**: You don't need to change how you call OpenAI, Anthropic, or any other provider.
 - **Library Agnostic**: It works whether you use `axios`, `window.fetch`, `XMLHttpRequest`, or the official SDKs.
 - **Native Hooking**: It intercepts network traffic at the lowest possible layer (Node.js `http/https` modules or Browser network stacks).
+# Welcome to AI Quota Guard Wiki
 
-## Why Use Quota Guard?
+**AI Quota Guard** is your project's passive sentinel for AI stability and cost optimization. It sits directly at the network layer, ensuring your application remains safe from rate-limiting and budget overflows without requiring a single line of business logic change.
 
-During development and testing, AI interactions can be costly and fragile. Quota Guard solves several common pain points:
+---
 
-### 🏦 Budget Safety (Cost Savings)
-Repetitive debugging often involves sending the same prompts over and over. Quota Guard's intelligent caching ensures you only pay for the first prompt. Identical subsequent prompts are served instantly from your local cache.
+## 🚀 Key Learning Paths
 
-### 🚀 Developer Velocity
-By deduplicating parallel in-flight requests (e.g., caused by an accidental double React render), Quota Guard reduces the load on your AI providers and makes your application feel significantly more responsive.
+- **[Getting Started](./getting-started.md)**: Jump from 0 to 1 with Node.js and Vite integrations.
+- **[Configuration Guide](./configuration.md)**: Master the 5-layer configuration hierarchy.
+- **[Advanced Scenarios](./scenarios.md)**: handle streaming deduplication, complex key generation, and circuit breaking.
+- **[API Reference](./api.md)**: Detailed types and function signatures for power users.
 
-### 🛡️ Reliability (Circuit Breakers)
-AI APIs can be unstable or subject to heavy rate limiting. Quota Guard's built-in circuit breakers protect your application from cascading failures. If a provider starts failing, the guard opens, preventing further wasted calls and protecting your user experience.
+---
+
+## 🛡️ Core Principles
+
+### 1. Zero-Intrusion
+We believe you shouldn't have to change your LLM SDK code to protect your budget. Quota Guard intercepts `fetch`, `XHR`, and `http.request` globally.
+
+### 2. Intelligent Deduping
+By semantically analyzing request bodies, we merge identical in-flight prompts, saving massive costs during rapid UI development and debugging.
+
+### 3. Safety Guardrails
+Circuit breakers at both the request-level and process-level ensure that infinite loops or sudden provider failures don't drain your balance.
+
+---
+
+## 🛠 Active Maintenance
+
+The source for this documentation is managed directly in our repository under the `docs/` folder and synchronized automatically to this Wiki.
+tect your application from cascading failures. If a provider starts failing, the guard opens, preventing further wasted calls and protecting your user experience.
 
 ### 🍱 Standardized Observability
 All guarded requests are injected with `X-Quota-Guard` response headers (`HIT`, `SHARED`, `LIVE`), giving you instant visibility in your browser's Network tab or terminal logs without adding complex logging to your business logic.

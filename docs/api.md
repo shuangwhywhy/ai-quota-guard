@@ -1,19 +1,27 @@
 # API Reference
 
-This document covers the public functions and classes exported by `@shuangwhywhy/quota-guard`.
+Quota Guard provides a streamlined public API focused on ease of injection and configuration.
 
 ## Core Functions
 
-### `injectQuotaGuard(config?: QuotaGuardConfig)`
-The primary entry point for manual initialization.
-- **`config`**: (Optional) A partial configuration object to override defaults.
-- **Returns**: A cleanup function that removes all interceptors when called.
+### `injectQuotaGuard(overrides?: Partial<QuotaGuardConfig>)`
+The primary entry point. Initializes the global network interceptors and applies configuration.
+
+- **overrides**: Optional configuration object to merge with defaults.
+- **Returns**: `void`
+- **Scope**: Can be called multiple times; subsequent calls will re-configure the active guard.
 
 ### `defineConfig(config: Partial<QuotaGuardConfig>)`
-A helper function to provide type safety and autocompletion when writing your configuration file (e.g., `.quotaguardrc.ts`).
+A type-safe helper for creating configuration objects with full autocompletion support.
 
-### `getConfig() / setConfig(config)`
-Access or update the global configuration object at runtime.
+- **config**: A partial configuration object.
+- **Returns**: The same object (purely for type hinting).
+
+### `setConfig(config: Partial<QuotaGuardConfig>)`
+Directly updates the active configuration at runtime.
+
+### `getConfig()`
+Returns the currently active configuration object.
 
 ### `removeGlobalGuards()`
 Manually removes all network interceptors.

@@ -8,10 +8,6 @@ Install the package via your preferred package manager:
 
 ```bash
 npm install @shuangwhywhy/quota-guard
-# or
-yarn add @shuangwhywhy/quota-guard
-# or
-pnpm add @shuangwhywhy/quota-guard
 ```
 
 ---
@@ -40,10 +36,8 @@ If you prefer to initialize the guard explicitly in your entry file:
 ```typescript
 import { injectQuotaGuard } from '@shuangwhywhy/quota-guard';
 
-injectQuotaGuard({
-  // Optional configuration
-  enabled: process.env.NODE_ENV === 'development'
-});
+// Master injection (Safe to call multiple times)
+injectQuotaGuard();
 ```
 
 ---
@@ -79,7 +73,7 @@ You should see a clear banner in your terminal (Node.js) or browser console (Vit
 
 ```text
 ┌───────────────────────────────────────┐
-│ [Quota Guard] v1.9.0 READY            │
+│ [Quota Guard] v1.11.1 READY           │
 │ Mode: Development (Guarded)           │
 └───────────────────────────────────────┘
 ```
