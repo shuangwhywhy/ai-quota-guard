@@ -95,13 +95,15 @@ To understand the ecosystem:
 - **Manual Mocks**: Hard-to-maintain mocks that often pollute business logic.
 - **Quota Guard**: Development-time protection against meaningless or redundant AI calls.
 
-| Dimension | **AI Quota Guard** | Native Prompt Caching | Standard Gateways | Manual Mocking |
-| :--- | :--- | :--- | :--- | :--- |
-| **Primary Goal** | **Dev-time Budget Guard** | Performance / Cost | Governance / Proxy | One-off Testing |
-| **Intrusion** | **Zero (CLI / Runtime)** | Low (Arg change) | High (Endpoint change) | High (Code changes) |
-| **Dev Focus** | **Yes (Exclusive)** | No | No | Partial |
-| **Loop Protection**| **Active Circuit Breaker** | No | Basic Rate Limit | No |
-| **HMR Deduplication**| **Yes (Native)** | No | No | Manual |
+It is **additive** to production tools, not a replacement for them.
+
+| Dimension | **AI Quota Guard** | Native Prompt Caching | AI Gateways | Semantic Cache | Manual Mocking |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Primary Goal** | **Dev-time Guard** | Cost / Performance | Governance / Proxy | Similarity Reuse | One-off Testing |
+| **Intrusion** | **Zero (CLI / Runtime)** | Low (Arg change) | High (Endpoint change) | High (SDK change) | High (Code changes) |
+| **Dev Focus** | **Yes (Exclusive)** | No | No | No | Partial |
+| **Loop Protection**| **Active Fuse** | No | Basic Rate Limit | No | No |
+| **HMR Deduplication**| **Yes (Native)** | No | No | No | Manual |
 
 ---
 

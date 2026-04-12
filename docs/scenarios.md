@@ -1,6 +1,6 @@
 # Scenarios & Recipes
 
-Practical examples of how Quota Guard protects your **individual development loop** from meaningless AI calls.
+Practical recipes for securing your **individual development loop**. These focus on development-time noise protection, not production-level business logic.
 
 ---
 

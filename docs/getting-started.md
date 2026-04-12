@@ -39,6 +39,9 @@ npx qg run node app.js
 
 ## 3. The Frontend Path (Vite)
 
+> [!IMPORTANT]
+> This guard is built for development safety. It is **NOT** intended for production middleware logic.
+
 For pure frontend projects or if you prefer build-tool integration, use the Vite plugin.
 
 ### Setup `vite.config.ts`
