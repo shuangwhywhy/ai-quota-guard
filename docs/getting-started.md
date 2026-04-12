@@ -31,6 +31,7 @@ npx qg run node app.js
 ### Why use the CLI?
 - **Zero Code Stain**: No need to `import` anything in your business logic.
 - **Easy Cleanup**: Stop using it by just removing the `qg run` prefix.
+- **No Mocking Maintenance**: Get the speed and cost of local mocks without the headache of writing and updating mock files. Plus, zero risk of dev-only logic ever reaching production.
 - **Node-native**: Use the latest `--import` or `--require` hooks automatically.
 
 ---

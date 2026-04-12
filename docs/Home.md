@@ -6,12 +6,14 @@
 
 ## 🛡️ The Firewall Philosophy
 
-Unlike traditional SDK wrappers or observability platforms, Quota Guard functions as an **invisible, passive network guardrail**. We believe that your development cycle should be fearless:
+Quota Guard is the "surge protector" for AI developers. 
+
+Unlike traditional SDK wrappers or observability platforms, we focus on the **individual developer loop**. We believe that development-time requests — like those caused by your framework re-rendering or hot-reloading — should be virtually free. 
 
 - **Zero-Intrusion**: No code changes. No SDK wrappers. Just plug and play.
 - **Budget Protection**: Save tokens from hot-reloads, re-renders, and "noise."
-- **Safety First**: Built-in fuses (Circuit Breakers) to stop accidental infinite loops.
-- **Local Fidelity**: Use real SDKs and real providers with the efficiency of local mocks.
+- **Safety First**: Built-in "fuses" (Circuit Breakers) to stop accidental loops.
+- **Developer Focus**: Use real SDKs with the speed and cost of local mocks.
 
 ---
 

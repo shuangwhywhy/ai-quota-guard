@@ -10,9 +10,9 @@
 
 ### ❓ Why Quota Guard?
 
-Modern AI development is **noisy** and **expensive**. During a typical debug session, Framework artifacts like **Vite HMR**, **React StrictMode**, and component re-renders can trigger hundreds of redundant LLM API calls. A single logic error in a loop can drain your team's weekly quota in minutes.
+Modern AI development is **noisy** and **expensive**. During a typical debug session, framework artifacts like **Vite HMR**, **React StrictMode**, and component re-renders can trigger hundreds of redundant LLM API calls. A single logic error in a loop can drain your team's weekly quota in minutes.
 
-**Quota Guard** is an engineering-grade request guardrail. It sits invisibly between your application and AI providers (OpenAI, Anthropic, Gemini, DeepSeek, etc.), intercepting requests at the network level to deduplicate, cache, and provide a safety fuse for your development cycle.
+**Quota Guard** is an engineering-grade request guardrail. It solves a simple frustration: you shouldn't have to pay for a real AI call every time you fix a CSS bug or save a file. By blocking the "noise" of modern dev-tools, it lets you refresh your page a thousand times without checking your API bill. 
 
 **No SDK wrappers. No endpoint changes. No code pollution.**
 
@@ -87,6 +87,11 @@ Keep your debug logic out of your production bundle. Because we use network-leve
 ---
 
 ### ⚖️ Comparison
+
+To keep it simple:
+- **Prompt Caching**: Save money on your users (Provider-side optimization).
+- **AI Gateways**: Track and manage your API keys (Production governance).
+- **Quota Guard**: Stop burning money while you're just coding (Development-loop sanity).
 
 | Dimension | **AI Quota Guard** | Native Prompt Caching | Standard Gateways | Manual Mocking |
 | :--- | :--- | :--- | :--- | :--- |

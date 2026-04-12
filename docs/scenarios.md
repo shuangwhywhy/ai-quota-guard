@@ -5,14 +5,14 @@ Practical examples of how AI Quota Guard protects your development workflow.
 ---
 
 ## 1. Scenario: The HMR & StrictMode Noise
-**Problem**: In React/Vue development, `useEffect` or lifecycle hooks often fire twice due to `StrictMode` or fast refreshes (HMR). This doubles your token cost and slows down the UI.
+**Problem**: You are iterating on a UI component's CSS or layout while a `useEffect` triggers an AI call. Every time you save your CSS file, the framework reloads the component and re-triggers the AI API.
 
-**Solution**: Quota Guard automatically merges in-flight requests. You can tune the aggregation window using `debounceMs`.
+**Solution**: Quota Guard solves this "tax on UI debugging." It catches the redundant call at the network level, so you can tweak your styles 100 times without paying a dime to OpenAI.
 
 ```typescript
 // .quotaguardrc.ts
 export default {
-  // A slightly longer window to catch UI re-renders
+  // A slightly longer window to catch UI re-renders or quick-saves
   debounceMs: 500, 
   cacheKeyStrategy: 'intelligent'
 };
