@@ -5,6 +5,7 @@ export class BrowserCache extends BaseCache {
   private dbName = 'quota-guard-cache';
   private storeName = 'responses';
   private db: IDBDatabase | null = null;
+  private initPromise: Promise<IDBDatabase> | null = null;
 
   constructor() {
     super();
@@ -12,25 +13,32 @@ export class BrowserCache extends BaseCache {
 
   private async openDb(): Promise<IDBDatabase> {
     if (this.db) return this.db;
+    if (this.initPromise) return this.initPromise;
 
-    if (typeof indexedDB === 'undefined') {
-      throw new Error('Quota Guard: IndexedDB is not available in this environment.');
-    }
+    this.initPromise = (async () => {
+      try {
+        const db = await new Promise<IDBDatabase>((resolve, reject) => {
+          if (typeof indexedDB === 'undefined') {
+            return reject(new Error('Quota Guard: IndexedDB is not available in this environment.'));
+          }
+          const request = indexedDB.open(this.dbName, 1);
+          request.onupgradeneeded = () => {
+            const db = request.result;
+            if (!db.objectStoreNames.contains(this.storeName)) {
+              db.createObjectStore(this.storeName);
+            }
+          };
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+        this.db = db;
+        return db;
+      } finally {
+        this.initPromise = null;
+      }
+    })();
 
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, 1);
-      request.onupgradeneeded = () => {
-        const db = request.result;
-        if (!db.objectStoreNames.contains(this.storeName)) {
-          db.createObjectStore(this.storeName);
-        }
-      };
-      request.onsuccess = () => {
-        this.db = request.result;
-        resolve(this.db);
-      };
-      request.onerror = () => reject(request.error);
-    });
+    return this.initPromise;
   }
 
   protected async _get(key: string): Promise<SerializedCacheEntry | null> {

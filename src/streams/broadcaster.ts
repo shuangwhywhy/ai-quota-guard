@@ -28,25 +28,6 @@ export class ResponseBroadcaster {
       }
     }
 
-    if (this.isFinished) {
-      let body: Uint8Array | null = null;
-      if (canHaveBody) {
-        const totalLength = this.bufferedChunks.reduce((acc, chunk) => acc + chunk.length, 0);
-        body = new Uint8Array(totalLength);
-        let offset = 0;
-        for (const chunk of this.bufferedChunks) {
-          body.set(chunk, offset);
-          offset += chunk.length;
-        }
-      }
-      
-      return new Response(body as BodyInit | null, {
-        status: this.originalResponse.status,
-        statusText: this.originalResponse.statusText,
-        headers
-      });
-    }
-
     let currentController: ReadableStreamDefaultController;
     const stream = new ReadableStream({
       start: (controller) => {

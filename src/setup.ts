@@ -57,8 +57,8 @@ export const injectQuotaGuard = async (config?: Partial<QuotaGuardConfig> & { co
     const mergedConfig = quotaGuardMerger(
         config || {},                      // Level 1: Explicit Code Call / Plugin Configuration (Highest)
         envVarConfig,                      // Level 2: Environment Variable JSON
-        fileConfig.specific || {},         // Level 3: Environment Config File
-        fileConfig.base || {},             // Level 4: Base Config File
+        fileConfig.specific,               // Level 3: Environment Config File
+        fileConfig.base,                   // Level 4: Base Config File
         globalConfig || {},                // Level 5: Legacy/Generic UI Settings (Window)
         getDefaultConfig()                 // Level 6: Defaults (Lowest)
     );

@@ -152,10 +152,70 @@ describe('Final Coverage Push (Node)', () => {
     const debouncer = new PromiseDebouncer();
     
     const p1 = debouncer.debounce('test', 10);
-    // Manually delete the group from internal map to fail the (currentGroup === group) check
-    // @ts-expect-error
+    // @ts-expect-error - testing private instance
     debouncer.groups.delete('test');
     
     await p1;
+  });
+
+  it('covers Broadcaster body-less finish (L80, L60)', async () => {
+    const res = new Response(null, { status: 204 }); 
+    const broadcaster = new ResponseBroadcaster(res);
+    // Line 81 sets isFinished = true immediately
+    
+    // subscribe after isFinished
+    const sub = broadcaster.subscribe();
+    expect(sub.body).toBeNull();
+  });
+
+  it('covers Interceptor response catch block (L216)', async () => {
+    const mockPipeline = new GuardPipeline(vi.fn());
+    __injectTestPipeline(mockPipeline);
+    await applyGlobalGuards();
+
+    // Mock Response to throw on headers access
+    const weirdResponse = {
+      clone: () => weirdResponse,
+      get headers() { throw new Error('poisoned-headers'); }
+    } as any;
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue(weirdResponse);
+
+    // This should hit the catch block at L216
+    await fetch('https://api.openai.com/v1/chat');
+    
+    globalThis.fetch = originalFetch;
+  });
+
+  it('covers Broadcaster cancel branch (L47)', async () => {
+    const res = new Response('cancel-me');
+    const broadcaster = new ResponseBroadcaster(res);
+    const sub = broadcaster.subscribe();
+    // Cancel the stream to trigger the cancel() algorithm
+    await sub.body?.cancel();
+  });
+
+  it('covers Interceptor async error catch (L209)', async () => {
+    const mockPipeline = new GuardPipeline(vi.fn());
+    __injectTestPipeline(mockPipeline);
+    await applyGlobalGuards();
+
+    // Mock getFinalBuffer to reject
+    vi.spyOn(ResponseBroadcaster.prototype, 'getFinalBuffer').mockRejectedValue(new Error('async-fail'));
+
+    vi.spyOn(mockPipeline, 'processRequest').mockResolvedValue({
+      key: 'async-fail-key',
+      resolveBroadcaster: vi.fn()
+    });
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response('ok'));
+
+    await fetch('https://api.openai.com/v1/chat');
+    
+    // Wait for the async IIFE
+    await new Promise(r => setTimeout(r, 50));
+    globalThis.fetch = originalFetch;
   });
 });
