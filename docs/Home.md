@@ -1,46 +1,46 @@
-# Overview
+# Welcome to AI Quota Guard Docs
 
-**Quota Guard** (`@shuangwhywhy/quota-guard`) is a zero-intrusive engine designed to optimize AI application performance and stability. It achieves this through intelligent deduplication, caching, and guardrails.
-
-## The Core Philosophy: "Zero-Intrusion"
-
-Unlike traditional SDK wrappers or monkey-patching libraries, Quota Guard functions as a **purely passive, transparent network observer**. 
-
-- **No Code Changes**: You don't need to change how you call OpenAI, Anthropic, or any other provider.
-- **Library Agnostic**: It works whether you use `axios`, `window.fetch`, `XMLHttpRequest`, or the official SDKs.
-- **Native Hooking**: It intercepts network traffic at the lowest possible layer (Node.js `http/https` modules or Browser network stacks).
-# Welcome to AI Quota Guard Wiki
-
-**AI Quota Guard** is your project's passive sentinel for AI stability and cost optimization. It sits directly at the network layer, ensuring your application remains safe from rate-limiting and budget overflows without requiring a single line of business logic change.
+**AI Quota Guard** is the zero-intrusion development firewall for AI-native applications. It sits at the network layer to protect your API budget and engineering sanity during the development and debugging cycle.
 
 ---
 
-## 🚀 Key Learning Paths
+## 🛡️ The Firewall Philosophy
 
-- **[Getting Started](./getting-started.md)**: Jump from 0 to 1 with Node.js and Vite integrations.
-- **[Configuration Guide](./configuration.md)**: Master the 5-layer configuration hierarchy.
-- **[Advanced Scenarios](./scenarios.md)**: handle streaming deduplication, complex key generation, and circuit breaking.
+Unlike traditional SDK wrappers or observability platforms, Quota Guard functions as an **invisible, passive network guardrail**. We believe that your development cycle should be fearless:
+
+- **Zero-Intrusion**: No code changes. No SDK wrappers. Just plug and play.
+- **Budget Protection**: Save tokens from hot-reloads, re-renders, and "noise."
+- **Safety First**: Built-in fuses (Circuit Breakers) to stop accidental infinite loops.
+- **Local Fidelity**: Use real SDKs and real providers with the efficiency of local mocks.
+
+---
+
+## 🚀 Learning Paths
+
+- **[Getting Started](./getting-started.md)**: Jump from 0 to 1 with Node.js and Frontend integrations.
+- **[Core Scenarios](./scenarios.md)**: Deep dive into HMR protection, workflow debugging, and infinite loop prevention.
+- **[Configuration Guide](./configuration.md)**: Master the 6-level configuration hierarchy.
+- **[Advanced Setup](./advanced.md)**: Custom interceptors, stream broadcasting, and complex key generation.
 - **[API Reference](./api.md)**: Detailed types and function signatures for power users.
 
 ---
 
-## 🛡️ Core Principles
+## 💎 Core Principles
 
 ### 1. Zero-Intrusion
-We believe you shouldn't have to change your LLM SDK code to protect your budget. Quota Guard intercepts `fetch`, `XHR`, and `http.request` globally.
+Protect your budget without staining your codebase. Quota Guard intercepts `fetch`, `XHR`, and `http.request` globally at the runtime level.
 
-### 2. Intelligent Deduping
-By semantically analyzing request bodies, we merge identical in-flight prompts, saving massive costs during rapid UI development and debugging.
+### 2. Intelligent Deduplication
+By semantically analyzing request bodies, we merge identical in-flight prompts—especially those triggered by framework artifacts like React StrictMode or HMR.
 
-### 3. Safety Guardrails
-Circuit breakers at both the request-level and process-level ensure that infinite loops or sudden provider failures don't drain your balance.
+### 3. Circuit Breaking
+The "Fuse Box" for your development environment. If your code starts a recursive loop or a retry storm, the guard opens, killing the requests before they burn your quota.
+
+### 4. Visibility (Zero-Logging)
+All guarded requests are injected with `X-Quota-Guard` response headers (`HIT`, `SHARED`, `LIVE`). Get instant visibility in your browser's Network tab or terminal logs without adding a single line of `console.log` to your business logic.
 
 ---
 
 ## 🛠 Active Maintenance
 
-The source for this documentation is managed directly in our repository under the `docs/` folder and synchronized automatically to this Wiki.
-tect your application from cascading failures. If a provider starts failing, the guard opens, preventing further wasted calls and protecting your user experience.
-
-### 🍱 Standardized Observability
-All guarded requests are injected with `X-Quota-Guard` response headers (`HIT`, `SHARED`, `LIVE`), giving you instant visibility in your browser's Network tab or terminal logs without adding complex logging to your business logic.
+The source for this documentation is managed directly in our repository under the `docs/` folder and synchronized automatically to the GitHub Wiki.

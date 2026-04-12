@@ -1,38 +1,46 @@
-# AI Quota Guard
+# 🛡️ AI Quota Guard
+
+> **The Zero-Intrusive Firewall for AI Development.**
+> Stop wasting tokens on hot-reloads, React re-renders, and accidental loops without touching a single line of business logic.
 
 [![NPM Version](https://img.shields.io/npm/v/@shuangwhywhy/quota-guard.svg)](https://www.npmjs.com/package/@shuangwhywhy/quota-guard)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **The Zero-Intrusive Engine for AI Cost Savings & Stability.**
-> Automatically deduplicate, cache, and guard your LLM calls without changing a single line of business logic.
+---
+
+### ❓ Why Quota Guard?
+
+Modern AI development is **noisy** and **expensive**. During a typical debug session, Framework artifacts like **Vite HMR**, **React StrictMode**, and component re-renders can trigger hundreds of redundant LLM API calls. A single logic error in a loop can drain your team's weekly quota in minutes.
+
+**Quota Guard** is an engineering-grade request guardrail. It sits invisibly between your application and AI providers (OpenAI, Anthropic, Gemini, DeepSeek, etc.), intercepting requests at the network level to deduplicate, cache, and provide a safety fuse for your development cycle.
+
+**No SDK wrappers. No endpoint changes. No code pollution.**
 
 ---
 
-## 📖 Documentation
+### ✨ Key Capabilities
 
-The most comprehensive documentation is available through our **[GitHub Wiki](https://github.com/shuangwhywhy/ai-quota-guard/wiki)**.
-
----
-
-## ⚡️ Why Quota Guard?
-
-During development, UI re-renders, automatic effects, and repetitive debugging sessions can cause hundreds of identical LLM API calls. This leads to blown budgets, rate-limiting (`429 Too Many Requests`), and interrupted development.
-
-AI Quota Guard is a **zero-preference, zero-intrusion engine** that seamlessly intercepts network calls — specifically those bound for AI endpoints.
-
-- **🏦 Save Money**: Intelligent caching eliminates costs for identical prompts across sessions.
-- **🚀 Faster DX**: In-flight deduplication and aggregation make your app feel snappier.
-- **🛡️ Safety First**: Per-key and Global Circuit Breakers stop infinite loops from nuking your API quota.
-- **🔌 Zero-Intrusion**: Works with ANY SDK (OpenAI, LangChain, etc.) via native global interception.
+*   **🛡️ Runtime Firewall**: Intercepts and guards LLM requests at the source, preventing budget-draining noise.
+*   **⚡ Zero-Intrusion**: Works via runtime injection. No SDK wrappers, no endpoint changes, no code pollution.
+*   **🔄 Stream Deduplication**: Intelligently merges concurrent identical requests while maintaining real-time streaming feedback.
+*   **🧨 Circuit Breaker**: Proactively stops infinite loops and accidental retry storms to protect your shared quotas.
+*   **📂 Local-First Persistence**: Persists expensive AI responses locally to speed up repetitive debugging and save costs.
 
 ---
 
-## 🚀 Quick Start
+### 🚫 Why existing solutions are not enough?
 
-The most flexible way to use Quota Guard is via its **Framework-Agnostic** CLI or direct import.
+- **Production Gateways** (like LiteLLM or Portkey) are designed for high-concurrency and multi-tenancy. They are too heavy for local development and don't understand the "noise" of a hot-reloading DevServer.
+- **Native Prompt Caching** is a great way to save money on stable prompts, but it doesn't stop accidental infinite loops or redundant calls from your UI framework during active coding.
+- **Manual Mocking** clutters your business logic with environment-aware `if` statements and static JSON files that are brittle and hard to maintain.
 
-### 1. Unified CLI (Recommended for Node.js)
+---
 
+### 🚀 Quick Start
+
+The most flexible way to use Quota Guard is via its **Framework-Agnostic** CLI.
+
+#### 1. Unified CLI (Recommended for Node.js)
 Works with ANY framework (Next.js, NestJS, Nuxt, Vite, etc.) by wrapping your command.
 
 ```bash
@@ -44,18 +52,14 @@ npx qg run npm run dev
 npx qg run npx next dev
 ```
 
-### 2. Manual Registration (Frontend/Bundlers)
-
+#### 2. Manual Registration (Frontend/Bundlers)
 For non-Vite projects or if you prefer explicit code injection, add this to the very top of your application entry point (e.g., `main.ts` or `app/layout.tsx`).
 
 ```typescript
 import '@shuangwhywhy/quota-guard/register';
 ```
 
-### 3. Vite Plugin (Convenience)
-
-You can still use the dedicated plugin if preferred.
-
+#### 3. Vite Plugin (Convenience)
 ```typescript
 import { quotaGuardPlugin } from '@shuangwhywhy/quota-guard/vite';
 
@@ -66,41 +70,43 @@ export default {
 
 ---
 
-## ⚙️ Configuration (The 6-Level Hierarchy)
+### 📖 Use Cases
 
-Quota Guard uses a multi-layered configuration system. Settings merge from lowest to highest priority (Level 1 wins):
+#### 1. The HMR & StrictMode Multiplier
+React `StrictMode` and Vite HMR often cause components to mount twice or re-trigger effects. Quota Guard catches these at the network level. No matter how many times your component refreshes, identical prompts within a short window only cost you **one** request.
 
-1.  **Code**: `injectQuotaGuard({...})` or Vite plugin options.
-2.  **Env Var JSON**: `QUOTA_GUARD_CONFIG` (set by `qg run`).
-3.  **Env File**: `.quotaguardrc.[envName].ts`
-4.  **Project Base**: `.quotaguardrc.ts` or `package.json`.
-5.  **Global**: `window.__QUOTA_GUARD_CONFIG__` (Browser fallback).
-6.  **Defaults**: Internal sensible defaults (Absolute fallback).
+#### 2. Workflow-First Debugging
+When debugging a long business chain (e.g., *Analyze Text -> Save DB -> Send Email*), you rarely care about the AI's creative output quality. Quota Guard caches the response locally so you can iterate on your business logic 100 times while only hitting the API once.
 
----
+#### 3. The Infinite Loop Fuse
+Writing an Agent loop or a tricky `useEffect`? One hand-off error can trigger a loop that burns $50 in seconds. Quota Guard's built-in **Circuit Breaker** detects these patterns and trips the fuse before your quota is gone.
 
-## 🔍 Observability & Verification
----
-
-## 🛠 Command Line Interface (CLI)
-
-```bash
-# Initialize a template configuration file (.quotaguardrc.json)
-npx qg init
-
-# Check installed version
-npx qg version
-```
+#### 4. Total Environment Isolation
+Keep your debug logic out of your production bundle. Because we use network-level interception, there's no `if (process.env.DEV)` scattered through your business code.
 
 ---
 
-## 🧠 How It Works
+### ⚖️ Comparison
 
-- **Network Coverage**: Powered by `@mswjs/interceptors`. Covers `fetch`, `XMLHttpRequest`, and Node.js `http`/`https` modules natively across Node and Browser.
-- **Real-time Streaming**: Uses a custom `ResponseBroadcaster` to "tee" AI streams. Deduplicated requests receive identical stream chunks simultaneously in real-time.
-- **Provider Intelligence**: Auto-detects major providers (OpenAI, Anthropic, Gemini, DeepSeek, etc.) to extract exact semantic fields.
+| Dimension | **AI Quota Guard** | Native Prompt Caching | Standard Gateways | Manual Mocking |
+| :--- | :--- | :--- | :--- | :--- |
+| **Primary Goal** | **Dev-time Budget Guard** | Performance / Cost | Governance / Proxy | One-off Testing |
+| **Intrusion** | **Zero (CLI / Runtime)** | Low (Arg change) | High (Endpoint change) | High (Code changes) |
+| **Dev Focus** | **Yes (Exclusive)** | No | No | Partial |
+| **Loop Protection**| **Active Circuit Breaker** | No | Basic Rate Limit | No |
+| **HMR Deduplication**| **Yes (Native)** | No | No | Manual |
 
 ---
 
-## ⚖️ License
+### 🧠 How it Works
+
+Powered by `@mswjs/interceptors`, Quota Guard captures `fetch`, `XMLHttpRequest`, and Node.js `http`/`https` calls at the kernel level.
+
+- **Deduplication**: Uses a custom `ResponseBroadcaster` to "tee" AI streams. Deduplicated requests receive identical stream chunks in real-time.
+- **Provider Intelligence**: Auto-detects major providers (OpenAI, Anthropic, Gemini, DeepSeek, etc.) to extract semantic fields for cache keys.
+- **6-Level Config**: Settings merge from CLI args, Env Vars, `.quotaguardrc.ts`, and project defaults.
+
+---
+
+### ⚖️ License
 MIT © qyz
