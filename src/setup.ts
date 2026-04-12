@@ -2,7 +2,12 @@ import { setConfig, QuotaGuardConfig } from './config.js';
 import { applyGlobalGuards } from './core/interceptor.js';
 
 export const injectQuotaGuard = async (config?: Partial<QuotaGuardConfig> & { configPath?: string }) => {
-  // 0. Hook immediately to prevent race conditions during async config loading
+  // 0. Production Safety Check: Absolutely no-op in production to prevent performance or security leakage.
+  if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'production') {
+    return;
+  }
+
+  // 1. Hook immediately to prevent race conditions during async config loading
   await applyGlobalGuards();
 
   let fileConfig: { base: Partial<QuotaGuardConfig>, specific: Partial<QuotaGuardConfig> } = { base: {}, specific: {} };

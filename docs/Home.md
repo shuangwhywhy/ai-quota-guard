@@ -1,25 +1,36 @@
 # Welcome to AI Quota Guard Docs
 
-**AI Quota Guard** is the zero-intrusion development firewall for AI-native applications. It sits at the network layer to protect your API budget and engineering sanity during the development and debugging cycle.
+**AI Quota Guard** is the "Optimal Balance" development firewall for AI-native engineering. It operates at the network layer to shield your API budget and engineering focus from framework-induced noise without staining your codebase or introducing infrastructure overhead.
+
+---
+
+## ⚖️ The Optimal Balance
+
+AI Quota Guard is built on the belief that developer safety shouldn't come at the cost of architectural complexity. We solve the 7 core pain points of modern AI development:
+
+1.  **Zero-Intrusive Adoption**: Plug-and-play as a transparent wrapper. No SDK swaps, no logic pollution, and zero footprint in your business code.
+2.  **Universal Compatibility**: Framework-agnostic at its core. Whether it's Next.js, Vite, or a raw Node server, one command (`npx qg`) covers every stack with zero per-project adapters.
+3.  **Intelligent Guarding, Not "Dumb Mocks"**: The perfect middle ground. It silences framework noise (HMR, re-renders) but allows real requests when you need them. Debug with mock speed and LLM truth.
+4.  **Zero Infrastructure Burden**: No local proxy servers, no Docker containers, and no extra processes. A lightweight, in-process engine that adds zero system pressure.
+5.  **Production-Hardened Safety**: Built-in environment isolation. The guard is physically incapable of active interception in production, eliminating all risk of leakage.
+6.  **Team-Scale Portability**: Seamlessly portable across environments. Config is project-scoped and versioned—new team members are "protected" the moment they `git clone`.
+7.  **Controlled Flexibility**: Break-glass escape hatches are standard. Break default limits for critical truth-seeking requests without dismantling your safety net.
+
+---
+
+## 🚧 What this is NOT
+
+To maintain its "Zero-Intrusive" promise and developer-first focus, Quota Guard is strictly bounded:
+- **NOT for Production**: It is physically bypassed in production via environment checks. It is NOT for high-concurrency traffic governance or routing.
+- **NOT a Gateway**: It does NOT require endpoint changes or a centralized proxy server. It is NOT for managing team-wide API keys or logs.
+- **NOT a Code-Staining SDK**: It does NOT force you to use custom wrappers or inject logic into your functional code.
+- **NOT a Provider-side Cache**: It does NOT replace prompt caching from providers; it is an additive layer that stops redundant IDE/Framework noise before it leaves your machine.
 
 ---
 
 ## 🛡️ The Firewall Philosophy
 
-Quota Guard is the "surge protector" for AI developers. 
-
-Unlike traditional SDK wrappers or observability platforms, we focus on the **individual developer loop**. Crucially, Quota Guard is built for development safety. It is **NOT** intended for production middleware logic. We ensure that framework-induced requests — like those caused by HMR or re-rendering — never hit your API balance.
-
-- **Zero-Intrusion**: No code changes. No SDK wrappers. Just plug and play.
-- **Budget Protection**: Save tokens from hot-reloads, re-renders, and "noise."
-- **Safety First**: Built-in "fuses" (Circuit Breakers) to stop accidental loops.
-- **Developer Focus**: Use real SDKs with the speed and cost of local mocks.
-
-### 🚧 What this is NOT
-- **NOT** intended for production traffic governance.
-- **NOT** a multi-tenant gateway for team management.
-- **NOT** a replacement for provider-side prompt caching.
-- **NOT** solving for production-scale traffic.
+Unlike traditional AI gateways or observability platforms, Quota Guard focuses exclusively on the **Individual Developer Loop**. It is a safety fuse that ensures Vite HMR, React StrictMode, or accidental loops never burn your project's quota.
 
 ---
 
