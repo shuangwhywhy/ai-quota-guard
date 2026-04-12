@@ -1,12 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { injectQuotaGuard } from '../../src/setup';
 import { GuardPipeline } from '../../src/core/pipeline';
 import { applyGlobalGuards, removeGlobalGuards, createFetchInterceptor } from '../../src/core/interceptor';
 import { setConfig, getDefaultConfig } from '../../src/config';
 import { loadQuotaGuardConfig } from '../../src/loader';
 import { generateStableKey } from '../../src/keys/normalizer';
 import { ResponseBroadcaster } from '../../src/streams/broadcaster';
-import { PromiseDebouncer } from '../../src/utils/debounce-promise';
 import * as c12 from 'c12';
 
 vi.mock('c12', async (importOriginal) => {
@@ -64,7 +62,9 @@ describe('Coverage Gap Filler', () => {
       // Intercept the internal redirection fetch specifically
       const originalFetch = globalThis.fetch;
       globalThis.fetch = vi.fn().mockImplementation((input, init) => {
-          if (init?.headers?.get?.('x-quota-guard-internal') === 'true' || (init?.headers && (init.headers as any)['x-quota-guard-internal'] === 'true')) {
+          // @ts-expect-error: accessing internal headers for test verification
+          const isInternal = init?.headers?.get?.('x-quota-guard-internal') === 'true' || (init?.headers && init.headers['x-quota-guard-internal'] === 'true');
+          if (isInternal) {
               return Promise.reject(new Error('redirection_fail'));
           }
           return originalFetch(input, init);
@@ -130,7 +130,8 @@ describe('Coverage Gap Filler', () => {
     it('hits catch block in processRequest for non-Error throws', async () => {
       // Line 162 in pipeline.ts: e instanceof Error ? e : new Error(String(e))
       const pipeline = new GuardPipeline(() => {});
-      vi.spyOn(pipeline as any, 'isGuarded').mockImplementation(() => { throw 'string_error_message'; });
+      // @ts-expect-error: injecting non-Error throw to test catch block normalization
+      vi.spyOn(pipeline, 'isGuarded').mockImplementation(() => { throw 'string_error_message'; });
       
       try {
         const res = await pipeline.processRequest(new Request('https://openai.com'));
@@ -145,7 +146,7 @@ describe('Coverage Gap Filler', () => {
     it('hits isGuarded catch block for malformed URL objects', () => {
       // Line 185 in pipeline.ts
       const pipeline = new GuardPipeline(() => {});
-      // @ts-expect-error - testing invalid input
+      // @ts-expect-error: testing invalid input that throws on toString
       const res = pipeline.isGuarded({ toString: () => { throw new Error('fail'); } }, 'GET', getDefaultConfig());
       expect(res).toBe(false);
     });
@@ -154,10 +155,10 @@ describe('Coverage Gap Filler', () => {
       // Lines 211-217 in pipeline.ts
       const pipeline = new GuardPipeline(() => {});
       const rule = { match: { url: '/openai/' }, override: {} };
-      // @ts-expect-error - private method
-      expect(pipeline.matchRule('https://api.openai.com', {}, rule as any)).toBe(true);
-      // @ts-expect-error - non-match
-      expect(pipeline.matchRule('https://google.com', {}, rule as any)).toBe(false);
+      // @ts-expect-error: accessing private matchRule for regex branch coverage
+      expect(pipeline.matchRule('https://api.openai.com', {}, rule)).toBe(true);
+      // @ts-expect-error: accessing private matchRule for negative test
+      expect(pipeline.matchRule('https://google.com', {}, rule)).toBe(false);
     });
 
     it('hits logFingerprintConflict mismatch branch', () => {
@@ -166,7 +167,7 @@ describe('Coverage Gap Filler', () => {
         const current = { url: 'u', method: 'GET', headers: { 'authorization': 'a', 'x-custom': '1' } };
         const original = { url: 'u', method: 'GET', headers: { 'authorization': 'b', 'x-custom': '2' } };
         setConfig({ keyHeaders: ['x-custom'] });
-        // @ts-expect-error - private method
+        // @ts-expect-error: accessing private logFingerprintConflict for diff branch coverage
         pipeline.logFingerprintConflict(current, original, 'key123');
         expect(warnSpy).toHaveBeenCalled();
     });
@@ -177,7 +178,7 @@ describe('Coverage Gap Filler', () => {
       const originalEnv = process.env.NODE_ENV;
       delete process.env.NODE_ENV;
       
-      // @ts-expect-error - mock behavior
+      // @ts-expect-error: mocking c12 loadConfig for environment fallback coverage
       c12.loadConfig.mockResolvedValue({ config: {}, _configFile: '.quotaguardrc' });
       await loadQuotaGuardConfig(undefined);
       
@@ -186,7 +187,7 @@ describe('Coverage Gap Filler', () => {
 
     it('loadQuotaGuardConfig hits fallbackConfig directory branch', async () => {
       // Lines 49-50 in loader.ts
-      // @ts-expect-error - mock behavior
+      // @ts-expect-error: mocking c12 loadConfig sequence for directory fallback coverage
       c12.loadConfig.mockResolvedValueOnce({ config: undefined, _configFile: undefined }) // base
                    .mockResolvedValueOnce({ config: undefined, _configFile: undefined }) // specific
                    .mockResolvedValueOnce({ config: { debounceMs: 123 }, _configFile: '.quota-guard/config' }); // directory fallback

@@ -61,8 +61,8 @@ describe('Hardening Master (Node)', () => {
         const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
         const current = { headers: { 'authorization': 'Bearer new' } };
         const original = { headers: { 'authorization': 'Bearer old' } };
-        // @ts-expect-error
-        p.logFingerprintConflict(current as any, original as any, 'key');
+        // @ts-expect-error: accessing private logFingerprintConflict for diff branch coverage
+        p.logFingerprintConflict(current, original, 'key');
         expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('COLLISION'));
         warnSpy.mockRestore();
     });
@@ -72,7 +72,7 @@ describe('Hardening Master (Node)', () => {
         vi.spyOn(globalBreaker, 'isGlobalOpen').mockReturnValue(true);
         const p = new GuardPipeline(() => {});
         const req = new Request('https://api.openai.com/v1/chat');
-        // @ts-expect-error
+        // @ts-expect-error: accessing private processRequest for breaker coverage
         const res = await p.processRequest(req, getConfig());
         expect(res.status).toBe('BREAKER');
     });
@@ -86,7 +86,7 @@ describe('Hardening Master (Node)', () => {
         vi.spyOn(mockPipeline, 'processRequest').mockImplementation(() => {
             throw new Error('sync-fatal');
         });
-        try { await fetch('https://api.openai.com/v1/chat'); } catch {}
+        try { await fetch('https://api.openai.com/v1/chat'); } catch { /* expected sync-fatal error */ }
 
         // 2. Hit Line 200 (request_failed)
         vi.spyOn(mockPipeline, 'processRequest').mockResolvedValue({
@@ -98,15 +98,13 @@ describe('Hardening Master (Node)', () => {
         await fetch('https://api.openai.com/v1/chat');
         globalThis.fetch = originalFetch;
 
-        // 3. Hit Line 82 (startBroadcasting catch)
-        // We'll mock pipeline.processRequest to return something that makes startBroadcasting fail.
-        // startBroadcasting calls new ResponseBroadcaster(response).
         // If we provide a "response" that isn't really a Response or has a weird getter...
         vi.spyOn(mockPipeline, 'processRequest').mockResolvedValue({
             key: 'weird',
-            response: { headers: { get: () => { throw new Error('headers-fail'); } } } as any,
+            // @ts-expect-error: injecting sync-failing response mock
+            response: { headers: { get: () => { throw new Error('headers-fail'); } } },
             resolveBroadcaster: vi.fn()
         });
-        try { await fetch('https://api.openai.com/v1/chat'); } catch {}
+        try { await fetch('https://api.openai.com/v1/chat'); } catch { /* expected headers-fail error */ }
     });
 });

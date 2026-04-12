@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { injectQuotaGuard } from '../../src/setup';
 import { applyGlobalGuards, removeGlobalGuards, __injectTestPipeline } from '../../src/core/interceptor';
 import { ResponseBroadcaster } from '../../src/streams/broadcaster';
-import { setConfig, getConfig, QuotaGuardConfig } from '../../src/config';
+import { setConfig, getConfig } from '../../src/config';
 import { GuardPipeline } from '../../src/core/pipeline';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -76,13 +76,13 @@ describe('Final Coverage Push (Node)', () => {
 
     const p = new GuardPipeline(vi.fn());
     const req = new Request('https://api.openai.com/v1/chat');
-    // @ts-expect-error
+    // @ts-expect-error: accessing private processRequest for coverage
     const res = await p.processRequest(req, getConfig());
     expect(res.status).toBe('BREAKER');
 
     // !isGuarded branch
     const reqPassthrough = new Request('https://google.com');
-    // @ts-expect-error
+    // @ts-expect-error: accessing private processRequest for coverage
     const resPassthrough = await p.processRequest(reqPassthrough, getConfig());
     expect(resPassthrough.key).toBeUndefined();
   });
@@ -91,13 +91,10 @@ describe('Final Coverage Push (Node)', () => {
     const p = new GuardPipeline(vi.fn());
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    // @ts-expect-error - testing private method
-    p.logFingerprintConflict({ headers: {} }, undefined, 'test');
-    
     // Header mismatch branch
     const current = { headers: { 'authorization': 'Bearer token1' } };
     const original = { headers: { 'authorization': 'Bearer token2' } };
-    // @ts-expect-error
+    // @ts-expect-error: accessing private logFingerprintConflict for coverage
     p.logFingerprintConflict(current, original, 'test');
     expect(warnSpy).toHaveBeenCalled();
     warnSpy.mockRestore();
@@ -138,7 +135,7 @@ describe('Final Coverage Push (Node)', () => {
 
   it('covers setup.ts PKG_VERSION fallback (L12, L86)', async () => {
     const originalVersion = globalThis.PKG_VERSION;
-    // @ts-expect-error
+    // @ts-expect-error: PKG_VERSION is a build-time constant
     delete globalThis.PKG_VERSION;
     
     // Trigger config reload which uses PKG_VERSION
@@ -152,7 +149,7 @@ describe('Final Coverage Push (Node)', () => {
     const debouncer = new PromiseDebouncer();
     
     const p1 = debouncer.debounce('test', 10);
-    // @ts-expect-error - testing private instance
+    // @ts-expect-error: accessing private groups for race condition test
     debouncer.groups.delete('test');
     
     await p1;
@@ -177,8 +174,9 @@ describe('Final Coverage Push (Node)', () => {
     const weirdResponse = {
       clone: () => weirdResponse,
       get headers() { throw new Error('poisoned-headers'); }
-    } as any;
+    };
 
+    // @ts-expect-error: injecting poisoned-headers mock
     const originalFetch = globalThis.fetch;
     globalThis.fetch = vi.fn().mockResolvedValue(weirdResponse);
 

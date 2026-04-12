@@ -1,4 +1,11 @@
-import { execSync } from 'child_process';
+import { spawnSync } from 'child_process';
+
+/** 
+ * AI Quota Guard: Pre-Release Gatekeeper
+ * 
+ * This script ensures that the codebase is in a stable, high-quality state
+ * before allowing a release-it process to proceed.
+ */
 
 const colors = {
   reset: '\x1b[0m',
@@ -9,27 +16,40 @@ const colors = {
   cyan: '\x1b[36m',
 };
 
+/* eslint-disable no-console */
 const log = (msg) => console.log(msg);
 const logStep = (name) => log(`\n${colors.cyan}${colors.bright}▶ Running: ${name}...${colors.reset}`);
 const logSuccess = (name) => log(`${colors.green}✔ ${name} Passed${colors.reset}`);
-const logFailure = (name, error) => {
+const logFailure = (name, errorMessage) => {
   log(`\n${colors.red}${colors.bright}✖ ${name} Failed!${colors.reset}`);
-  if (error) log(`${colors.red}${error.message || error}${colors.reset}`);
+  if (errorMessage) log(`${colors.red}${errorMessage}${colors.reset}`);
 };
 
-const runCommand = (name, command, failOnWarning = false) => {
+const runCommand = (name, command) => {
   logStep(name);
-  try {
-    // We use stdio: 'inherit' for most but capture for lint to check warnings if needed
-    // However, for simplicity and user requirement of "clear output", we'll inherit 
-    // and rely on the --max-warnings 0 flag for eslint.
-    execSync(command, { stdio: 'inherit' });
-    logSuccess(name);
-    return true;
-  } catch (error) {
-    logFailure(name);
+  
+  const [cmd, ...args] = command.split(' ');
+  const result = spawnSync(cmd, args, { 
+    stdio: ['inherit', 'inherit', 'pipe'],
+    shell: true,
+    env: { ...process.env, FORCE_COLOR: '1' }
+  });
+
+  if (result.status !== 0) {
+    const stderr = result.stderr.toString();
+    // Filter out known harmless npm warnings from the error output to reduce noise
+    const importantErrors = stderr
+      .split('\n')
+      .filter(line => !line.includes('Unknown user config "home"') && !line.includes('Unknown env config "home"'))
+      .join('\n')
+      .trim();
+
+    logFailure(name, importantErrors);
     return false;
   }
+
+  logSuccess(name);
+  return true;
 };
 
 async function main() {
@@ -37,10 +57,9 @@ async function main() {
   log(`${colors.cyan}──────────────────────────────────────────────────${colors.reset}`);
 
   const steps = [
-    { name: 'Environment Setup (npm install)', command: 'npm install' },
-    { name: 'Production Build (npm run build)', command: 'npm run build' },
-    { name: 'Code Quality (npm run lint)', command: 'npm run lint' },
-    { name: 'Stability & Coverage (npm run test:coverage)', command: 'npm run test:coverage' },
+    { name: 'Production Build', command: 'npm run build' },
+    { name: 'Code Quality (Lint)', command: 'npm run lint' },
+    { name: 'Stability & Coverage', command: 'npm run test:coverage' },
   ];
 
   const results = [];
@@ -70,11 +89,11 @@ async function main() {
 
   if (blocked) {
     log(`\n${colors.red}${colors.bright}🛑 RELEASE BLOCKED${colors.reset}`);
-    log(`${colors.red}Please resolve the errors/warnings above before attempting to release again.${colors.reset}\n`);
+    log(`${colors.red}One or more quality checks failed. Please resolve the issues above.${colors.reset}\n`);
     process.exit(1);
   } else {
     log(`\n${colors.green}${colors.bright}✅ RELEASE GATE PASSED${colors.reset}`);
-    log(`${colors.green}System is in a stable, high-quality state. Proceeding with release...${colors.reset}\n`);
+    log(`${colors.green}Proceeding with release...${colors.reset}\n`);
     process.exit(0);
   }
 }
