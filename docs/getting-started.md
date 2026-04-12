@@ -82,7 +82,7 @@ You should see a clear banner in your terminal (Node.js) or browser console (Vit
 
 ```text
 ┌───────────────────────────────────────┐
-│ [Quota Guard] v1.12.0 READY           │
+│ [Quota Guard] v2.0.0 READY           │
 │ Mode: Development (Guarded)           │
 └───────────────────────────────────────┘
 ```

@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.0.0](https://github.com/shuangwhywhy/ai-quota-guard/compare/v1.12.0...v2.0.0) (2026-04-12)
+
+### Features
+
+* add support for QUOTA_GUARD_CONFIG environment variable and update configuration merge hierarchy ([341d4e7](https://github.com/shuangwhywhy/ai-quota-guard/commit/341d4e7101f03ba9506cbb4c341ac2d261381334))
+
 ## [1.12.0](https://github.com/shuangwhywhy/ai-quota-guard/compare/v1.11.2...v1.12.0) (2026-04-12)
 
 ### Features
