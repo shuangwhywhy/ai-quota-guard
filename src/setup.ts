@@ -54,7 +54,7 @@ export const injectQuotaGuard = async (config?: Partial<QuotaGuardConfig> & { co
   // eslint-disable-next-line no-console
   console.log(
     `┌───────────────────────────────────────┐\n` +
-    `│ [Quota Guard] v1.9.0 READY            │\n` +
+    `│ [Quota Guard] v${typeof PKG_VERSION !== 'undefined' ? PKG_VERSION : '?.?.?'} READY            │\n` +
     `│ Mode: ${process.env.NODE_ENV === 'production' ? 'Production (Bypass)' : 'Development (Guarded)'}        │\n` +
     `└───────────────────────────────────────┘`
   );
