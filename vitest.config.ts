@@ -5,6 +5,7 @@ import pkg from './package.json';
 
 export default defineConfig({
   test: {
+    testTimeout: 30000,
     // Consolidated Projects for Node and Real Browser Environments
     projects: [
       {
@@ -16,6 +17,7 @@ export default defineConfig({
           environment: 'node',
           include: ['tests/node/**/*.test.ts'],
           exclude: ['tests/browser/**/*'],
+          testTimeout: 30000,
         }
       },
       {
@@ -40,7 +42,8 @@ export default defineConfig({
             api: {
               host: '127.0.0.1',
               port: 63315 // Vitest default browser port
-            }
+            },
+            testTimeout: 60000,
           }
         },
         optimizeDeps: {

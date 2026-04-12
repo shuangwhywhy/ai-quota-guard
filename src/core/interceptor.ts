@@ -28,7 +28,14 @@ const emitAudit = (event: AuditEvent) => {
   }
 };
 
-const pipeline = new GuardPipeline(emitAudit);
+let pipeline = new GuardPipeline(emitAudit);
+
+/**
+ * INTERNAL USE ONLY: Reset or inject a mock pipeline for testing.
+ */
+export const __injectTestPipeline = (p: GuardPipeline) => {
+  pipeline = p;
+};
 
 /**
  * Global Network Interceptor: Passively catch and manage all traffic (Fetch & XHR).
