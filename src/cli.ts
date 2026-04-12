@@ -4,9 +4,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import pkg from '../package.json';
 
-// Declared by tsup define in tsup.config.ts
-declare const PKG_VERSION: string;
-
 // Professional self-healing: use build-time injection, fallback to package.json
 const VERSION = typeof PKG_VERSION !== 'undefined' ? PKG_VERSION : pkg.version;
 
