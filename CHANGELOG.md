@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.1.0](https://github.com/shuangwhywhy/ai-quota-guard/compare/v2.0.2...v2.1.0) (2026-04-12)
+
+### Features
+
+* enable implicit CLI execution and smart script resolution for commands ([7062288](https://github.com/shuangwhywhy/ai-quota-guard/commit/70622883681c5b1000993322bd83c1cd840c693d))
+
 ## [2.0.2](https://github.com/shuangwhywhy/ai-quota-guard/compare/v2.0.1...v2.0.2) (2026-04-12)
 
 ## [2.0.1](https://github.com/shuangwhywhy/ai-quota-guard/compare/v2.0.0...v2.0.1) (2026-04-12)
