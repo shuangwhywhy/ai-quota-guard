@@ -37,17 +37,27 @@ describe('Vite Plugin (quotaGuardPlugin)', () => {
       const plugin = quotaGuardPlugin();
       
       // Simulate PRODUCTION build
-      plugin.configResolved({ command: 'build' });
+      plugin.configResolved({ command: 'build', mode: 'production' });
       const prodResult = plugin.transformIndexHtml();
       expect(prodResult).toBeUndefined();
 
       // Simulate DEVELOPMENT serve
-      plugin.configResolved({ command: 'serve' });
+      plugin.configResolved({ command: 'serve', mode: 'development' });
       const devResult = plugin.transformIndexHtml();
       expect(devResult).toBeDefined();
       expect(devResult[0].tag).toBe('script');
       expect(devResult[0].attrs.src).toBe('/@quota-guard/register');
       expect(devResult[0].injectTo).toBe('head-prepend');
+    });
+
+    it('serializes custom options into the virtual module', async () => {
+      // @ts-expect-error - testing virtual methods
+      const plugin = quotaGuardPlugin({ enabled: false, debounceMs: 999 });
+      plugin.configResolved({ command: 'serve', mode: 'development' });
+      
+      const content = await plugin.load('/@quota-guard/register');
+      expect(content).toContain('"enabled":false');
+      expect(content).toContain('"debounceMs":999');
     });
   });
 });

@@ -6,9 +6,20 @@ export const injectQuotaGuard = async (config?: Partial<QuotaGuardConfig> & { co
   applyGlobalGuards();
 
   let fileConfig: { base: Partial<QuotaGuardConfig>, specific: Partial<QuotaGuardConfig> } = { base: {}, specific: {} };
-  
-  // 1. Node-only: Auto-load files via c12
+  let envVarConfig: Partial<QuotaGuardConfig> = {};
+
+  // 1. Node-only: Auto-load files via c12 & environment variables
   if (typeof process !== 'undefined' && process.versions && process.versions.node) {
+    // 1.1 Read from QUOTA_GUARD_CONFIG env var (Level 2: High priority)
+    if (process.env.QUOTA_GUARD_CONFIG) {
+      try {
+        envVarConfig = JSON.parse(process.env.QUOTA_GUARD_CONFIG);
+      } catch {
+        // eslint-disable-next-line no-console
+        console.warn('[Quota Guard] Failed to parse QUOTA_GUARD_CONFIG env var. It must be valid JSON.');
+      }
+    }
+
     try {
       // Use dynamic import for Node loading to prevent browser bundling issues
       const { loadQuotaGuardConfig } = await import('./loader.js');
@@ -18,23 +29,24 @@ export const injectQuotaGuard = async (config?: Partial<QuotaGuardConfig> & { co
     }
   }
 
-  // 2. Load from browser global if available (Level 5: Lowest priority)
+  // 2. Load from browser global if available (Level 6: Lowest priority)
   const globalConfig = typeof window !== 'undefined'
     ? (window as unknown as Record<string, unknown>).__QUOTA_GUARD_CONFIG__ as Partial<QuotaGuardConfig> | undefined
     : undefined;
   
-  // 3. Composite Merge (Hierarchy requested by user)
-  // 1: Plugin Args > 2: Env File > 3: Base File > 4: Defaults > 5: Global Window
+  // 3. Composite Merge (Hierarchy)
+  // 1: Plugin Args > 2: Env JSON > 3: Env File > 4: Base File > 5: Defaults > 6: Global Window
   try {
     const { quotaGuardMerger } = await import('./loader.js');
     const { getDefaultConfig } = await import('./config.js');
     
     const mergedConfig = quotaGuardMerger(
-        config || {},                      // Level 1: Plugin Configuration (Highest)
-        fileConfig.specific || {},         // Level 2: Environment Config File
-        fileConfig.base || {},             // Level 3: Base Config File
-        getDefaultConfig(),                // Level 4: Defaults
-        globalConfig || {}                 // Level 5: Non-Plugin Code Settings (Lowest)
+        config || {},                      // Level 1: Explicit Code Call / Plugin Configuration (Highest)
+        envVarConfig,                      // Level 2: Environment Variable JSON
+        fileConfig.specific || {},         // Level 3: Environment Config File
+        fileConfig.base || {},             // Level 4: Base Config File
+        globalConfig || {},                // Level 5: Legacy/Generic UI Settings (Window)
+        getDefaultConfig()                 // Level 6: Defaults (Lowest)
     );
     
     if (Object.keys(mergedConfig).length > 0) {
@@ -46,6 +58,9 @@ export const injectQuotaGuard = async (config?: Partial<QuotaGuardConfig> & { co
     const mergedConfig = { 
         ...globalConfig, 
         ...getDefaultConfig(), 
+        ...fileConfig.base,
+        ...fileConfig.specific,
+        ...envVarConfig,
         ...config 
     };
     setConfig(mergedConfig);

@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawn } from 'node:child_process';
 import pkg from '../../package.json';
 import { main } from '../../src/cli.js';
+import { loadQuotaGuardConfig } from '../../src/loader.js';
 
 vi.mock('node:fs', async () => {
     const actual = await vi.importActual('node:fs') as typeof fs;
@@ -19,6 +21,23 @@ vi.mock('node:fs', async () => {
                 return actual.readFileSync(pathStr);
             }),
         }
+    };
+});
+
+vi.mock('node:child_process', () => ({
+    spawn: vi.fn(() => ({
+        on: vi.fn(),
+    })),
+}));
+
+vi.mock('../../src/loader.js', async () => {
+    const actual = await vi.importActual('../../src/loader.js') as object;
+    return {
+        ...actual,
+        loadQuotaGuardConfig: vi.fn().mockResolvedValue({
+            base: { enabled: true },
+            specific: { cacheTtlMs: 5000 }
+        }),
     };
 });
 
@@ -97,6 +116,90 @@ describe('Quota Guard CLI', () => {
         await main(['invalid-cmd']);
         expect(mockError).toHaveBeenCalledWith('Unknown command: invalid-cmd');
         expect(mockExit).toHaveBeenCalledWith(1);
+    });
+
+    describe('run command', () => {
+        it('aborts run if no command provided', async () => {
+            await main(['run']);
+            expect(mockError).toHaveBeenCalledWith(expect.stringContaining('No command provided'));
+            expect(mockExit).toHaveBeenCalledWith(1);
+        });
+
+        it('successfully spawns child process with injected flags and config', async () => {
+            const mockSpawn = vi.mocked(spawn);
+            await main(['run', 'node', 'app.js']);
+
+            expect(loadQuotaGuardConfig).toHaveBeenCalled();
+            expect(mockSpawn).toHaveBeenCalled();
+
+            const [cmd, args, options] = mockSpawn.mock.calls[0];
+            expect(cmd).toBe('node');
+            expect(args).toEqual(['app.js']);
+            
+            // Check Env Var
+            expect(options.env.QUOTA_GUARD_CONFIG).toContain('"enabled":true');
+            expect(options.env.QUOTA_GUARD_CONFIG).toContain('"cacheTtlMs":5000');
+            
+            // Check NODE_OPTIONS
+            expect(options.env.NODE_OPTIONS).toContain('@shuangwhywhy/quota-guard/register');
+            expect(options.env.NODE_OPTIONS).toMatch(/--import|--loader/);
+            
+            expect(options.stdio).toBe('inherit');
+            expect(options.shell).toBe(true);
+        });
+
+        it('presets NODE_OPTIONS if they already exist', async () => {
+            const mockSpawn = vi.mocked(spawn);
+            process.env.NODE_OPTIONS = '--max-old-space-size=4096';
+            
+            await main(['run', 'node', 'app.js']);
+            
+            const options = mockSpawn.mock.calls[0][2];
+            expect(options.env.NODE_OPTIONS).toContain('--max-old-space-size=4096');
+            expect(options.env.NODE_OPTIONS).toContain('@shuangwhywhy/quota-guard/register');
+            
+            delete process.env.NODE_OPTIONS;
+        });
+
+        it('uses --import for modern Node versions (>= 20.6.0)', async () => {
+            const mockSpawn = vi.mocked(spawn);
+            vi.stubGlobal('process', { ...process, versions: { ...process.versions, node: '20.6.0' } });
+            
+            await main(['run', 'node', 'app.js']);
+            
+            const options = mockSpawn.mock.calls[0][2];
+            expect(options.env.NODE_OPTIONS).toContain('--import');
+            
+            vi.unstubAllGlobals();
+        });
+
+        it('uses --loader for older Node versions (< 20.6.0)', async () => {
+            const mockSpawn = vi.mocked(spawn);
+            vi.stubGlobal('process', { ...process, versions: { ...process.versions, node: '18.15.0' } });
+            
+            await main(['run', 'node', 'app.js']);
+            
+            const options = mockSpawn.mock.calls[0][2];
+            expect(options.env.NODE_OPTIONS).toContain('--loader');
+            
+            vi.unstubAllGlobals();
+        });
+
+        it('forwards exit code from child processsink', async () => {
+            const mockExitEvent = vi.fn();
+            const mockChild = { on: mockExitEvent };
+            // @ts-expect-error - mockChild is a minimal mock of ChildProcess
+            vi.mocked(spawn).mockReturnValue(mockChild);
+
+            await main(['run', 'node', 'app.js']);
+
+            expect(mockExitEvent).toHaveBeenCalledWith('exit', expect.any(Function));
+            
+            // Trigger exit
+            const exitHandler = mockExitEvent.mock.calls[0][1];
+            exitHandler(42);
+            expect(mockExit).toHaveBeenCalledWith(42);
+        });
     });
 
     it('handles thrown errors in catch block via isMain branch', async () => {

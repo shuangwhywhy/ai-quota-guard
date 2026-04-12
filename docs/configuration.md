@@ -2,17 +2,21 @@
 
 Quota Guard is designed to be highly configurable via a declarative object. It supports multiple formats (`.js`, `.ts`, `.json`, `.yaml`) and automatically discovers configuration files in your project.
 
-## 1. Discovery & Hierarchy (The 5-Level Strategy)
+## 1. Discovery & Hierarchy (The 6-Level Strategy)
 
 Quota Guard searches for configuration in the following order of priority (1 = highest):
 
 | Level | Priority | Type | Description |
 | :--- | :--- | :--- | :--- |
-| **1** | **Highest** | **Code** | Passed directly to `injectQuotaGuard({...})`. |
-| **2** | **Env-Specific** | **Project Root** | `.quotaguardrc.[envName].[ext]` (e.g., `.quotaguardrc.production.ts`) |
-| **3** | **Project Base** | **Project Root** | `.quotaguardrc.[ext]` or `package.json` (via `quotaguard` key). |
-| **4** | **Fallback Dir** | **Internal Dir** | `.quota-guard/config.[ext]` inside the repository root. |
-| **5** | **Lowest** | **Embedded** | Built-in fallback settings defined in the library. |
+| **1** | **Highest** | **Code** | Passed directly to `injectQuotaGuard({...})` or plugin options. |
+| **2** | **Env Var** | **CLI/Env** | `QUOTA_GUARD_CONFIG` (JSON string). Automatically set by `qg run`. |
+| **3** | **Env File** | **Project Root** | `.quotaguardrc.[envName].[ext]` (e.g., `.quotaguardrc.production.ts`) |
+| **4** | **Project Base** | **Project Root** | `.quotaguardrc.[ext]` or `package.json` (via `quotaguard` key). |
+| **5** | **Global** | **Browser Window** | `window.__QUOTA_GUARD_CONFIG__`. |
+| **6** | **Lowest** | **Embedded** | Built-in fallback settings defined in the library. |
+
+> [!TIP]
+> Use `qg run <command>` to automatically load your local configuration files and inject them into the environment as a high-priority Level 2 override.
 
 > [!NOTE]
 > Environment-specific files (`Level 2`) are only loaded if `process.env.NODE_ENV` (or a custom env passed to the loader) matches the file suffix.

@@ -29,18 +29,32 @@ AI Quota Guard is a **zero-preference, zero-intrusion engine** that seamlessly i
 
 ## 🚀 Quick Start
 
-### 1. Node.js (Backend)
+The most flexible way to use Quota Guard is via its **Framework-Agnostic** CLI or direct import.
 
-Run your app with Quota Guard injected natively using standard Node flags.
+### 1. Unified CLI (Recommended for Node.js)
+
+Works with ANY framework (Next.js, NestJS, Nuxt, Vite, etc.) by wrapping your command.
 
 ```bash
-# Node >= 20.6.0
-NODE_ENV=development node --import @shuangwhywhy/quota-guard/register app.js
+# Initialize config (once)
+npx qg init
+
+# Wrap your dev server
+npx qg run npm run dev
+npx qg run npx next dev
 ```
 
-### 2. Vite (Frontend)
+### 2. Manual Registration (Frontend/Bundlers)
 
-Add the plugin to your `vite.config.ts`.
+For non-Vite projects or if you prefer explicit code injection, add this to the very top of your application entry point (e.g., `main.ts` or `app/layout.tsx`).
+
+```typescript
+import '@shuangwhywhy/quota-guard/register';
+```
+
+### 3. Vite Plugin (Convenience)
+
+You can still use the dedicated plugin if preferred.
 
 ```typescript
 import { quotaGuardPlugin } from '@shuangwhywhy/quota-guard/vite';
@@ -52,13 +66,20 @@ export default {
 
 ---
 
+## ⚙️ Configuration (The 6-Level Hierarchy)
+
+Quota Guard uses a multi-layered configuration system. Settings merge from lowest to highest priority (Level 1 wins):
+
+1.  **Code**: `injectQuotaGuard({...})` or Vite plugin options.
+2.  **Env Var JSON**: `QUOTA_GUARD_CONFIG` (set by `qg run`).
+3.  **Env File**: `.quotaguardrc.[envName].ts`
+4.  **Project Base**: `.quotaguardrc.ts` or `package.json`.
+5.  **Global**: `window.__QUOTA_GUARD_CONFIG__` (Browser fallback).
+6.  **Defaults**: Internal sensible defaults (Absolute fallback).
+
+---
+
 ## 🔍 Observability & Verification
-
-Quota Guard provides clear signals to confirm its active state and health:
-
-1.  **Startup Banner**: Upon initialization, a `[Quota Guard] READY` banner appears in your terminal or browser console.
-2.  **Network Insight**: Every intercepted response includes the `X-Quota-Guard` header in your **Network Tab**, indicating its status (`HIT`, `SHARED`, `LIVE`, or `BYPASS`).
-
 ---
 
 ## 🛠 Command Line Interface (CLI)

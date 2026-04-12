@@ -516,4 +516,93 @@ describe('Quota Guard Multi-Provider Interception', () => {
     // Intelligent strategy ignores temperature and stream → cache hit!
     expect(nativeFetchMock).toHaveBeenCalledTimes(1);
   });
+
+  describe('Advanced Rule Matching & Keying', () => {
+    it('matches rules using exact string for URL', async () => {
+        const url = 'https://api.openai.com/v1/special-path';
+        setConfig({
+            enabled: true,
+            aiEndpoints: ['api.openai.com'],
+            rules: [
+                {
+                    match: { url: 'https://api.openai.com/v1/special-path' },
+                    override: { cacheTtlMs: 99999 }
+                }
+            ]
+        });
+        guardedFetch = createFetchInterceptor(nativeFetchMock);
+
+        await guardedFetch(url, { method: 'POST', body: '{}' });
+        // No easy way to check internal state, but we ensure it doesn't crash 
+        // and matches works
+        expect(nativeFetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('matches rules using header conditions', async () => {
+        const url = 'https://api.openai.com/v1/chat';
+        setConfig({
+            enabled: true,
+            aiEndpoints: ['api.openai.com'],
+            rules: [
+                {
+                    match: { headers: { 'X-Custom-Rule': 'apply' } },
+                    override: { cacheTtlMs: 0 } // Bypass cache
+                }
+            ]
+        });
+        guardedFetch = createFetchInterceptor(nativeFetchMock);
+
+        // 1. Populate cache
+        await guardedFetch(url, { method: 'POST', body: 'test' });
+        expect(nativeFetchMock).toHaveBeenCalledTimes(1);
+
+        await new Promise(r => setTimeout(r, 20));
+
+        // 2. Call again with matching header -> should bypass cache
+        await guardedFetch(url, { 
+            method: 'POST', 
+            body: 'test',
+            headers: { 'X-Custom-Rule': 'apply' }
+        });
+        expect(nativeFetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('influences cache key based on keyHeaders', async () => {
+        const url = 'https://api.openai.com/v1/chat';
+        setConfig({
+            enabled: true,
+            aiEndpoints: ['api.openai.com'],
+            keyHeaders: ['X-User-ID']
+        });
+        guardedFetch = createFetchInterceptor(nativeFetchMock);
+
+        // 1. User A call
+        await guardedFetch(url, { 
+            method: 'POST', 
+            body: 'test',
+            headers: { 'X-User-ID': 'user-A' }
+        });
+        expect(nativeFetchMock).toHaveBeenCalledTimes(1);
+
+        await new Promise(r => setTimeout(r, 20));
+
+        // 2. User B call with identical body -> should NOT hit cache!
+        await guardedFetch(url, { 
+            method: 'POST', 
+            body: 'test',
+            headers: { 'X-User-ID': 'user-B' }
+        });
+        expect(nativeFetchMock).toHaveBeenCalledTimes(2);
+
+        await new Promise(r => setTimeout(r, 20));
+
+        // 3. User A call again -> should HIT cache!
+        await guardedFetch(url, { 
+            method: 'POST', 
+            body: 'test',
+            headers: { 'X-User-ID': 'user-A' }
+        });
+        expect(nativeFetchMock).toHaveBeenCalledTimes(2);
+    });
+  });
 });

@@ -65,7 +65,7 @@ export const DEFAULT_AI_ENDPOINTS = [
 ];
 
 export const getDefaultConfig = (): QuotaGuardConfig => {
-  const isProd = process.env.NODE_ENV === 'production';
+  const isProd = typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'production';
   return {
     enabled: !isProd,
     aiEndpoints: [...DEFAULT_AI_ENDPOINTS],

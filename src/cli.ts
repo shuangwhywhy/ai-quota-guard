@@ -2,7 +2,10 @@
 /* eslint-disable no-console */
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawn } from 'node:child_process';
 import pkg from '../package.json';
+import { loadQuotaGuardConfig, quotaGuardMerger } from './loader.js';
+import { getDefaultConfig } from './config.js';
 
 // Professional self-healing: use build-time injection, fallback to package.json
 const VERSION = typeof PKG_VERSION !== 'undefined' ? PKG_VERSION : pkg.version;
@@ -66,8 +69,14 @@ export async function main(argv = process.argv.slice(2), cwd = process.cwd()) {
 AI Quota Guard CLI v${VERSION}
 
 Usage:
+  qg run <cmd>      Run a command with Quota Guard injected
   qg init           Create a .quotaguardrc.ts configuration file
   qg version        Show version
+
+Examples:
+  qg run node app.js
+  qg run npm run dev
+  qg run npx next dev
 `);
     return;
   }
@@ -93,6 +102,59 @@ Usage:
     console.log(`  1. Customize the rules in ${filename}`);
     console.log(`  2. Ensure your project is set up to load TS files (or rename to .js/.json)`);
     console.log(`  3. Run your app with Quota Guard active.\n`);
+    return;
+  }
+
+  if (command === 'run') {
+    const subArgs = argv.slice(1);
+    if (subArgs.length === 0) {
+      console.error('Error: No command provided to "qg run".');
+      console.log('Usage: qg run <command> [args...]');
+      process.exit(1);
+    }
+
+    // 1. Load configuration
+    const env = process.env.NODE_ENV || 'development';
+    const fileConfigs = await loadQuotaGuardConfig(env, undefined, cwd);
+    const finalConfig = quotaGuardMerger(
+      fileConfigs.specific || {},
+      fileConfigs.base || {},
+      getDefaultConfig()
+    );
+
+    // 2. Prepare environment variables
+    const newEnv = { ...process.env };
+    newEnv.QUOTA_GUARD_CONFIG = JSON.stringify(finalConfig);
+
+    // 3. Determine Node injection flag
+    // We point to the 'register' entry point.
+    const registerPath = '@shuangwhywhy/quota-guard/register';
+    
+    // Node >= 20.6.0 supports --import
+    const nodeVersion = process.versions.node;
+    const majorVersion = parseInt(nodeVersion.split('.')[0], 10);
+    const isModern = majorVersion > 20 || (majorVersion === 20 && parseInt(nodeVersion.split('.')[1], 10) >= 6);
+    
+    const injectionFlag = isModern ? `--import ${registerPath}` : `--loader ${registerPath}`;
+    
+    if (newEnv.NODE_OPTIONS) {
+      newEnv.NODE_OPTIONS = `${injectionFlag} ${newEnv.NODE_OPTIONS}`;
+    } else {
+      newEnv.NODE_OPTIONS = injectionFlag;
+    }
+
+    // 4. Spawn child process
+    const child = spawn(subArgs[0], subArgs.slice(1), {
+      cwd,
+      env: newEnv,
+      stdio: 'inherit',
+      shell: true
+    });
+
+    child.on('exit', (code) => {
+      process.exit(code || 0);
+    });
+
     return;
   }
 

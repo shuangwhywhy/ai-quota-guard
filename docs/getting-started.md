@@ -12,22 +12,31 @@ npm install @shuangwhywhy/quota-guard
 
 ---
 
-## 2. Node.js (Backend / Tools)
+## 2. Universal Setup (Recommended)
 
-For Node.js, the most "zero-intrusive" way is to register the guard via command-line flags. This works with any script, including tests (Vitest/Jest) or dev servers.
+The easiest way to use Quota Guard across **any framework** (Next.js, Vite, NestJS, Nuxt, etc.) is via the CLI runner.
 
-### Using CLI Registration (Recommended)
-This approach requires **zero code changes** to your application.
-
-**For CommonJS or simple scripts:**
 ```bash
-node --require @shuangwhywhy/quota-guard/register app.js
+# 1. Initialize config
+npx qg init
+
+# 2. Wrap your dev/app command
+npx qg run npm run dev
+npx qg run node app.js
 ```
 
-**For ESM (`"type": "module"`):**
+### Manual Injection (Advanced)
+
+If you prefer to register the guard via command-line flags without using the `qg run` wrapper:
+
+**For ESM (`node >= 20.6.0`):**
 ```bash
-# Node >= 20.6.0
 node --import @shuangwhywhy/quota-guard/register app.js
+```
+
+**For CommonJS:**
+```bash
+node --require @shuangwhywhy/quota-guard/register app.js
 ```
 
 ### Manual Injection (Code-based)
