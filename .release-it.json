@@ -15,5 +15,8 @@
       "preset": "conventionalcommits",
       "infile": "CHANGELOG.md"
     }
+  },
+  "hooks": {
+    "after:bump": "node scripts/update-docs-version.mjs ${version} && git add docs/"
   }
 }
