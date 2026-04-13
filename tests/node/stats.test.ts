@@ -15,7 +15,7 @@ describe('Observability Logic', () => {
     });
 
     it('handles circular objects in estimateTokens', () => {
-      const circular: any = { a: 1 };
+      const circular: Record<string, unknown> = { a: 1 };
       circular.self = circular;
       expect(estimateTokens(circular)).toBe(0); // Should catch and return 0
     });

@@ -10,7 +10,7 @@ import { GuardPipeline } from './pipeline.js';
 import { ResponseBroadcaster } from '../streams/broadcaster.js';
 import { bufferToBase64 } from '../utils/encoding.js';
 
-import { getMetadata, setMetadata } from './metadata.js';
+import { getMetadata, setMetadata, type InternalRequestMetadata } from './metadata.js';
 import { globalStats } from '../utils/stats-collector.js';
 import { logIntercept } from '../utils/logger.js';
 import { computeUsage } from '../providers/token-parser.js';
@@ -245,7 +245,7 @@ export const applyGlobalGuards = async () => {
             await activeCache.set(key, cacheData);
             
             // Record LIVE stats
-            const reqBody = (meta as RequestMetadata).requestBody;
+            const reqBody = (meta as InternalRequestMetadata).requestBody;
             let resBody: unknown;
             try {
               const decoded = new TextDecoder().decode(buffer);

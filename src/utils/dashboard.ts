@@ -1,4 +1,4 @@
-import { globalStats, GuardEvent } from './stats-collector.js';
+import { globalStats } from './stats-collector.js';
 
 /**
  * Quota Guard Terminal Dashboard: Real-time, 2s refresh.
