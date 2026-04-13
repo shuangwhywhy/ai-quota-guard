@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.3.1](https://github.com/shuangwhywhy/ai-quota-guard/compare/v2.3.0...v2.3.1) (2026-04-13)
+
+## [2.3.0](https://github.com/shuangwhywhy/ai-quota-guard/compare/v2.2.3...v2.3.0) (2026-04-13)
+
+### Features
+
+* implement branching workflow and environment constraints ([78be2a8](https://github.com/shuangwhywhy/ai-quota-guard/commit/78be2a86f94d7d28fd505b79fd1f8101e6fbceaa))
+* implement granular branch naming conventions and integration rules ([35ff0d4](https://github.com/shuangwhywhy/ai-quota-guard/commit/35ff0d4bd9e6ab8be9fa89273de5790082bdf953))
+
+### Bug Fixes
+
+* add local validation to pre-commit and fix PATH issues ([6454ab7](https://github.com/shuangwhywhy/ai-quota-guard/commit/6454ab7681c69df39ed5a7e63c64fc7ba7606866))
+* enhance init command with env support and full defaults, and rename pre-release:gate to validate ([3c3b9f9](https://github.com/shuangwhywhy/ai-quota-guard/commit/3c3b9f95533f284dddb23e79b03f22493feaab4d))
+* implement git-ops hardening with husky and CI workflows ([6dfbd21](https://github.com/shuangwhywhy/ai-quota-guard/commit/6dfbd219a2fa351d45abbcaecbbbf85daa1eec92))
+* move PR validation check to pre-push hook ([236012f](https://github.com/shuangwhywhy/ai-quota-guard/commit/236012fb0b9072177bce93e5642dfdbb639e7ba1))
+* remove local validation checks, shift solely to GitHub PR validation ([de9420d](https://github.com/shuangwhywhy/ai-quota-guard/commit/de9420d60907f0b23a0757a4b5b4b63c9171c653))
+
 ## [2.2.4](https://github.com/shuangwhywhy/ai-quota-guard/compare/v2.2.3...v2.2.4) (2026-04-13)
 
 ### Features
