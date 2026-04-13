@@ -306,13 +306,25 @@ export const createFetchInterceptor = (nativeFetch: typeof globalThis.fetch) => 
 
     try {
       const result = await pipeline.processRequest(pipelineRequest);
+      if (result.error) {
+        if (result.key) {
+          globalStats.record({
+            type: 'BREAKER',
+            key: result.key,
+            url: pipelineRequest.url,
+            hostname: new URL(pipelineRequest.url).hostname
+          });
+          if (getConfig().consoleLog) logIntercept('BREAKER', result.key, pipelineRequest.url);
+        }
 
-      if (result.error && result.error instanceof CircuitBreakerError) {
-        return new Response('Quota Guard: Circuit breaker open.', {
-          status: 599,
-          statusText: 'Quota Guard: Circuit Breaker Open',
-          headers: { 'X-Quota-Guard-Reason': 'breaker-open' }
-        });
+        if (result.error instanceof CircuitBreakerError) {
+          return new Response('Quota Guard: Circuit breaker open.', {
+            status: 599,
+            statusText: 'Quota Guard: Circuit Breaker Open',
+            headers: { 'X-Quota-Guard-Reason': 'breaker-open' }
+          });
+        }
+        // Fall back to native fetch for other non-breaker errors
       }
 
       if (result.response) {

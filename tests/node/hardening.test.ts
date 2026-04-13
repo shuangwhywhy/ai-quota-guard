@@ -348,8 +348,61 @@ vi.mock('fs/promises', async (importOriginal) => {
       // Hit line 88: fallback if URL parse fails
       expect(extractSemanticFields('example.com', { foo: 'bar' })).toEqual({ foo: 'bar' });
 
+      // Hit Line 88 catch block: Completely malformed URL
+      // Use something that makes new URL() throw
+      expect(extractSemanticFields('https://:', { foo: 'bar' })).toEqual({ foo: 'bar' });
+
       PROVIDER_RULES.length = 0;
       PROVIDER_RULES.push(...originalRules);
+    });
+  });
+
+  describe('broadcaster.ts Harden', () => {
+    it('handles stream cancel (Line 47)', async () => {
+       const res = new Response(new ReadableStream({
+         start(c) { c.enqueue(new Uint8Array([1])); }
+       }));
+       const broadcaster = new ResponseBroadcaster(res);
+       const sub = broadcaster.subscribe();
+       
+       // Cancel the subscription
+       const reader = sub.body?.getReader();
+       await reader?.cancel();
+       
+       // Controller should be deleted
+       // @ts-expect-error - testing private controllers
+       expect(broadcaster.controllers.size).toBe(0);
+    });
+
+    it('getFinalBuffer awaits stream completion (Line 107-111)', async () => {
+      const res = new Response(new ReadableStream({
+        async start(c) {
+          await new Promise(r => setTimeout(r, 20));
+          c.enqueue(new Uint8Array([1, 2, 3]));
+          c.close();
+        }
+      }));
+      const broadcaster = new ResponseBroadcaster(res);
+      
+      const buffer = await broadcaster.getFinalBuffer();
+      expect(buffer.byteLength).toBe(3);
+    });
+  });
+
+  describe('normalizer.ts Harden', () => {
+    it('handles complex keyHeaders (Line 83-93)', async () => {
+       setConfig({ keyHeaders: ['X-API-KEY', 'X-Session-ID'] });
+       const headers = { 
+         'x-api-key': 'key123',
+         'x-session-id': 'session456',
+         'ignore-me': '789'
+       };
+       const key1 = await generateStableKey('url', 'POST', 'body', 'intelligent', headers);
+       
+       const headers2 = { 'x-api-key': 'key123' };
+       const key2 = await generateStableKey('url', 'POST', 'body', 'intelligent', headers2);
+       
+       expect(key1).not.toBe(key2);
     });
   });
 

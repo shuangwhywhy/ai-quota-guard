@@ -98,6 +98,16 @@ export class StatsCollector {
       return sum + (type === 'prompt' ? e.usage.promptTokens : e.usage.completionTokens);
     }, 0);
   }
+
+  /** @internal For testing only */
+  public clear() {
+    this.buffer = [];
+    this.totalReceivedTokens = 0;
+    this.totalResponseTokens = 0;
+    this.totalSavedTokens = 0;
+    this.totalRealSpentTokens = 0;
+    this.totalRequests = 0;
+  }
 }
 
 export const globalStats = StatsCollector.getInstance();
