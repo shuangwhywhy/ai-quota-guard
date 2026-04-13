@@ -155,7 +155,7 @@ describe('Quota Guard CLI', () => {
             expect(options.env.QUOTA_GUARD_CONFIG).toContain('"enabled":true');
             expect(options.env.QUOTA_GUARD_CONFIG).toContain('"cacheTtlMs":5000');
             
-            expect(options.env.NODE_OPTIONS).toContain('@shuangwhywhy/quota-guard/register');
+            expect(options.env.NODE_OPTIONS).toMatch(/register\.(mjs|js)/);
             expect(options.env.NODE_OPTIONS).toMatch(/--import|--loader/);
             
             expect(options.stdio).toBe('inherit');
@@ -170,7 +170,7 @@ describe('Quota Guard CLI', () => {
             
             const options = mockSpawn.mock.calls[0][2];
             expect(options.env.NODE_OPTIONS).toContain('--max-old-space-size=4096');
-            expect(options.env.NODE_OPTIONS).toContain('@shuangwhywhy/quota-guard/register');
+            expect(options.env.NODE_OPTIONS).toMatch(/register\.(mjs|js)/);
             
             delete process.env.NODE_OPTIONS;
         });

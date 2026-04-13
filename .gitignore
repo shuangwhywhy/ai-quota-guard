@@ -45,3 +45,6 @@ pids
 
 # Environment variables
 .env
+
+# Scratch and temporary files
+scratch/

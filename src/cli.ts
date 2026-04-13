@@ -111,7 +111,9 @@ async function runWithGuard(args: string[], cwd: string) {
   newEnv.QUOTA_GUARD_CONFIG = JSON.stringify(finalConfig);
 
   // 3. Determine Node injection flag (register entry point)
-  const registerPath = '@shuangwhywhy/quota-guard/register';
+  // Use absolute path to ensure it works in any directory regardless of local node_modules.
+  // We use __dirname which is automatically shimmed by tsup for both ESM and CJS.
+  const registerPath = path.resolve(__dirname, './register.mjs');
 
   // Node >= 20.6.0 supports --import
   const nodeVersion = process.versions.node;
@@ -204,17 +206,33 @@ Examples:
   // Smart handling for unrecognized commands
   const knownCommands = ['init', 'version', '--version', '-v'];
   if (!knownCommands.includes(command)) {
-    // If it looks like a script in package.json, prepend "npm run"
-    try {
-      const pkgPath = path.join(cwd, 'package.json');
-      if (fs.existsSync(pkgPath)) {
-        const pkgContent = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-        if (pkgContent.scripts && pkgContent.scripts[command]) {
-          return runWithGuard(['npm', 'run', ...argv], cwd);
-        }
+    // We need to identify the "actual" command, skipping any leading flags
+    let actualCommandIndex = 0;
+    while (actualCommandIndex < argv.length && argv[actualCommandIndex].startsWith('--')) {
+      if (argv[actualCommandIndex] === '--') {
+        actualCommandIndex++;
+        break;
       }
-    } catch {
-      // Fallback if package.json is missing or malformed
+      actualCommandIndex++;
+    }
+
+    const actualCommand = argv[actualCommandIndex];
+
+    if (actualCommand) {
+      // If it looks like a script in package.json, prepend "npm run"
+      try {
+        const pkgPath = path.join(cwd, 'package.json');
+        if (fs.existsSync(pkgPath)) {
+          const pkgContent = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+          if (pkgContent.scripts && pkgContent.scripts[actualCommand]) {
+            const newArgv = [...argv];
+            newArgv.splice(actualCommandIndex, 0, 'npm', 'run');
+            return runWithGuard(newArgv, cwd);
+          }
+        }
+      } catch {
+        // Fallback if package.json is missing or malformed
+      }
     }
 
     // Default to implicit run
