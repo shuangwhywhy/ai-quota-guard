@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.4](https://github.com/shuangwhywhy/ai-quota-guard/compare/v2.2.3...v2.2.4) (2026-04-13)
+
+### Features
+
+* **cli**: enhance `init` command to support environment-specific configuration and populate template with full defaults ([3c3b9f9](https://github.com/shuangwhywhy/ai-quota-guard/commit/3c3b9f9))
+* **cli**: rename `pre-release:gate` script to `validate` for better clarity ([3c3b9f9](https://github.com/shuangwhywhy/ai-quota-guard/commit/3c3b9f9))
+
 ## [2.2.3](https://github.com/shuangwhywhy/ai-quota-guard/compare/v2.2.2...v2.2.3) (2026-04-13)
 
 ## [2.2.2](https://github.com/shuangwhywhy/ai-quota-guard/compare/v2.2.1...v2.2.2) (2026-04-13)

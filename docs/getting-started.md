@@ -21,6 +21,7 @@ The easiest way to guard **any framework** (Next.js, Vite, NestJS, Nuxt, etc.) i
 ```bash
 # 1. Initialize your firewall config
 npx qg init
+npx qg init dev        # Initialize development specific config
 
 # 2. Wrap your start/dev command
 npx qg npm run dev
