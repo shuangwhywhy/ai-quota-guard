@@ -1,125 +1,124 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { writeFileSync, mkdirSync, rmSync, existsSync, mkdtempSync } from 'node:fs';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
-import { injectQuotaGuard } from '../../src/setup';
-import { getConfig, setConfig } from '../../src/config';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { setConfig, getConfig, ConfigSource, getDefaultConfig } from '../../src/config';
 
-describe('Configuration Priority (Exhaustive 6-Level Hierarchy)', () => {
-    let sandboxDir: string;
+describe('Layered Configuration Priority', () => {
+  beforeEach(() => {
+    // Reset by setting defaults back to their layer
+    setConfig(getDefaultConfig(), ConfigSource.Default);
+    // Clear other layers by setting them to empty objects
+    const layersToClear = [
+        ConfigSource.Global,
+        ConfigSource.FileBase,
+        ConfigSource.FileEnv,
+        ConfigSource.EnvVar,
+        ConfigSource.Plugin,
+        ConfigSource.Manual
+    ];
+    for (const source of layersToClear) {
+        setConfig({}, source);
+    }
+  });
 
-    beforeEach(() => {
-        sandboxDir = mkdtempSync(join(tmpdir(), 'quota-priority-exhaustive-'));
-        // Mock process.cwd() and NODE_ENV
-        vi.stubGlobal('process', {
-            ...process,
-            cwd: () => sandboxDir,
-            versions: { ...process.versions, node: '20.0.0' },
-            env: { ...process.env, NODE_ENV: 'test', QUOTA_GUARD_CONFIG: '' }
-        });
-        // Clear global window config
-        if (typeof window !== 'undefined') {
-            // @ts-expect-error - testing global config
-            delete window.__QUOTA_GUARD_CONFIG__;
-        } else {
-            vi.stubGlobal('window', {});
-        }
-        setConfig({});
-    });
+  it('respects the priority regardless of call order (Incremental Merge)', () => {
+    // 1. Set higher priority first
+    setConfig({ enabled: false }, ConfigSource.Manual);
+    expect(getConfig().enabled).toBe(false);
 
-    afterEach(() => {
-        if (existsSync(sandboxDir)) {
-            rmSync(sandboxDir, { recursive: true, force: true });
-        }
-        vi.unstubAllGlobals();
-    });
+    // 2. Set lower priority later - should NOT override manual
+    setConfig({ enabled: true }, ConfigSource.FileBase);
+    expect(getConfig().enabled).toBe(false); // Manual wins
 
-    const writeConfig = (name: string, content: unknown) => {
-        const fullPath = join(sandboxDir, name);
-        const dir = join(fullPath, '..');
-        if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-        writeFileSync(fullPath, JSON.stringify(content));
-    };
+    // 3. Update manual - should change
+    setConfig({ enabled: true }, ConfigSource.Manual);
+    expect(getConfig().enabled).toBe(true);
+  });
 
-    it('FULL PRIORITY CHAIN: L1 > L2 > L3 > L4 > L5 > L6', async () => {
-        // L1: Code/Plugin
-        // L2: Env Var JSON
-        // L3: Env-specific File
-        // L4: Base File
-        // L5: Window Global
-        // L6: Defaults
-        
-        const setupAll = async () => {
-            // L2: Env Var JSON (Level 2)
-            vi.stubGlobal('process', {
-                ...process,
-                env: { ...process.env, QUOTA_GUARD_CONFIG: JSON.stringify({ debounceMs: 150 }) }
-            });
-            // L3: Env File (Level 3)
-            writeConfig('.quotaguardrc.test.json', { debounceMs: 200 });
-            // L4: Base File (Level 4)
-            writeConfig('.quotaguardrc.json', { debounceMs: 300 });
-            // L5: Window Global (Level 5)
-            // @ts-expect-error - testing global config
-            window.__QUOTA_GUARD_CONFIG__ = { debounceMs: 500 };
-        };
+  it('merges different fields across layers', () => {
+    setConfig({ cacheTtlMs: 123 }, ConfigSource.FileBase);
+    setConfig({ debounceMs: 456 }, ConfigSource.Plugin);
+    
+    const config = getConfig();
+    expect(config.cacheTtlMs).toBe(123);
+    expect(config.debounceMs).toBe(456);
+  });
 
-        // Scenario 1: All layers present -> L1 wins (100)
-        await setupAll();
-        await injectQuotaGuard({ debounceMs: 100 });
-        expect(getConfig().debounceMs).toBe(100);
+  it('correctly overrides deep arrays (overwrites instead of concatenating)', () => {
+    setConfig({ aiEndpoints: ['base.api'] }, ConfigSource.FileBase);
+    setConfig({ aiEndpoints: ['override.api'] }, ConfigSource.Manual);
+    
+    const config = getConfig();
+    expect(config.aiEndpoints).toEqual(['override.api']);
+  });
 
-        // Scenario 2: L1 missing -> L2 wins (150)
-        await injectQuotaGuard({}); 
-        expect(getConfig().debounceMs).toBe(150);
+  it('handles environmental JSON via EnvVar source', () => {
+    setConfig({ cacheKeyStrategy: 'exact' }, ConfigSource.EnvVar);
+    expect(getConfig().cacheKeyStrategy).toBe('exact');
+  });
 
-        // Scenario 3: L1, L2 missing -> L3 wins (200)
-        vi.stubGlobal('process', {
-            ...process,
-            env: { ...process.env, QUOTA_GUARD_CONFIG: '' }
-        });
-        await injectQuotaGuard({});
-        expect(getConfig().debounceMs).toBe(200);
+  it('works with the new Vite plugin call pattern', () => {
+    // Simulate what the injected Vite script does
+    const fileBase = { cacheTtlMs: 1000 };
+    const fileEnv = { cacheTtlMs: 2000, enabled: false };
+    const pluginOptions = { enabled: true };
 
-        // Scenario 4: L1, L2, L3 missing -> L4 wins (300)
-        rmSync(join(sandboxDir, '.quotaguardrc.test.json'));
-        await injectQuotaGuard({});
-        expect(getConfig().debounceMs).toBe(300);
+    setConfig(fileBase, ConfigSource.FileBase);
+    setConfig(fileEnv, ConfigSource.FileEnv);
+    setConfig(pluginOptions, ConfigSource.Plugin);
 
-        // Scenario 5: L1, L2, L3, L4 missing -> L5 (Window) wins (500)
-        rmSync(join(sandboxDir, '.quotaguardrc.json'));
-        await injectQuotaGuard({});
-        expect(getConfig().debounceMs).toBe(500); 
+    const config = getConfig();
+    expect(config.cacheTtlMs).toBe(2000); // FileEnv > FileBase
+    expect(config.enabled).toBe(true);    // Plugin > FileEnv
+  });
 
-        // Scenario 6: Pure fallback -> L6 (Default) wins (300)
-        // @ts-expect-error - reset window
-        delete window.__QUOTA_GUARD_CONFIG__;
-        await injectQuotaGuard({});
-        expect(getConfig().debounceMs).toBe(300);
-    });
+  it('ensures manual code-level setConfig always wins', () => {
+    // Even if plugin says enabled:true
+    setConfig({ enabled: true }, ConfigSource.Plugin);
+    // User code says enabled:false
+    setConfig({ enabled: false }, ConfigSource.Manual);
+    
+    expect(getConfig().enabled).toBe(false);
+  });
 
-    it('DEEP MERGE: Objects are merged across layers', async () => {
-        // L1: Plugin
-        const l1 = { rules: [{ match: { url: 'l1' } }] };
-        // L2: Env JSON
-        vi.stubGlobal('process', {
-            ...process,
-            env: { ...process.env, QUOTA_GUARD_CONFIG: JSON.stringify({ breakerMaxFailures: 22 }) }
-        });
-        // L3: Env File
-        writeConfig('.quotaguardrc.test.json', { cacheCheckIntervalMs: 44 });
-        // L4: Base
-        writeConfig('.quotaguardrc.json', { cacheTtlMs: 33 });
-        // L5: Window
-        // @ts-expect-error - testing global config
-        window.__QUOTA_GUARD_CONFIG__ = { enabled: false };
+  it('supports fallback via Global (window configuration)', () => {
+    // Set a global fallback
+    setConfig({ cacheTtlMs: 999 }, ConfigSource.Global);
+    expect(getConfig().cacheTtlMs).toBe(999);
 
-        await injectQuotaGuard(l1);
+    // Set a file config - should override global
+    setConfig({ cacheTtlMs: 222 }, ConfigSource.FileBase);
+    expect(getConfig().cacheTtlMs).toBe(222);
+  });
 
-        const config = getConfig();
-        expect(config.rules![0].match.url).toBe('l1'); // From L1
-        expect(config.breakerMaxFailures).toBe(22); // From L2
-        expect(config.cacheTtlMs).toBe(33); // From L4 (Base)
-        expect(config.enabled).toBe(false); // From L5 (Window) wins over L6 (Default:true)
-    });
+  it('preserves fields that are not present in higher layers', () => {
+    // Level 10 sets endpoints
+    setConfig({ aiEndpoints: ['legacy.api'] }, ConfigSource.FileBase);
+    // Level 50 only sets enabled
+    setConfig({ enabled: false }, ConfigSource.Manual);
+
+    const config = getConfig();
+    expect(config.enabled).toBe(false);
+    expect(config.aiEndpoints).toEqual(['legacy.api']); // endpoints preserved from lower layer
+  });
+
+  it('correctly handles deep merging for complex objects like rules', () => {
+    const baseRules = [{ match: { url: '/v1' }, override: { debounceMs: 100 } }];
+    const manualRules = [{ match: { url: '/v2' }, override: { debounceMs: 200 } }];
+
+    setConfig({ rules: baseRules }, ConfigSource.FileBase);
+    expect(getConfig().rules).toEqual(baseRules);
+
+    // Manual rules override base rules entirely (due to array overwrite rule)
+    setConfig({ rules: manualRules }, ConfigSource.Manual);
+    expect(getConfig().rules).toEqual(manualRules);
+  });
+
+  it('ignores null or undefined in higher layers to allow partial overrides', () => {
+    setConfig({ debounceMs: 300 }, ConfigSource.FileBase);
+    // Setting it to undefined in a higher layer should keep the lower one if utilizing defu normally,
+    // though usually you'd just not include it.
+    // @ts-expect-error - testing undefined handling
+    setConfig({ debounceMs: undefined }, ConfigSource.Manual);
+    
+    expect(getConfig().debounceMs).toBe(300);
+  });
 });

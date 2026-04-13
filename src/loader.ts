@@ -1,13 +1,6 @@
 import { loadConfig } from 'c12';
-import { createDefu } from 'defu';
 import type { QuotaGuardConfig } from './config.js';
-
-export const quotaGuardMerger = createDefu((obj: Record<string, unknown>, key, value) => {
-  if (Array.isArray(obj[key]) || Array.isArray(value)) {
-    obj[key] = value;
-    return true;
-  }
-});
+import { quotaGuardMerger } from './utils/merge.js';
 
 export async function loadQuotaGuardConfig(env?: string, customPath?: string, cwd?: string): Promise<{ base: Partial<QuotaGuardConfig>, specific: Partial<QuotaGuardConfig> }> {
   const targetCwd = cwd || process.cwd();

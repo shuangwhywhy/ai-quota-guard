@@ -50,12 +50,15 @@ describe('Vite Plugin (quotaGuardPlugin)', () => {
       expect(devResult[0].injectTo).toBe('head-prepend');
     });
 
-    it('serializes custom options into the virtual module', async () => {
+    it('serializes custom options into the virtual module with layering', async () => {
       // @ts-expect-error - testing virtual methods
       const plugin = quotaGuardPlugin({ enabled: false, debounceMs: 999 });
       plugin.configResolved({ command: 'serve', mode: 'development' });
       
       const content = await plugin.load('/@quota-guard/register');
+      // Verify layered calls
+      expect(content).toContain('setConfig');
+      expect(content).toContain('ConfigSource.Plugin');
       expect(content).toContain('"enabled":false');
       expect(content).toContain('"debounceMs":999');
     });

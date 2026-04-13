@@ -55,17 +55,16 @@ export function QuotaGuardPlugin(options: Partial<QuotaGuardConfig> & { configPa
         // 1. Load from file system based on Vite mode (env isolation)
         const fileConfig = await loadQuotaGuardConfig(viteMode, options.configPath);
         
-        // 2. Composite: Plugin Options > File Config
-        // We use the same merger to ensure consistency
-        const { quotaGuardMerger } = await import('./loader.js');
-        const finalConfig = quotaGuardMerger(options, fileConfig);
+        // 2. We inject the ConfigSource enum and setConfig calls to the virtual module.
+        // This ensures the runtime handles priorities correctly based on the layered registry.
 
-        // This virtual module triggers the global hook and applies user configuration.
-        // It relies on the 'quota-guard' package being installed.
         return [
-          `import { setConfig } from "@shuangwhywhy/quota-guard";`,
+          `import { setConfig, ConfigSource } from "@shuangwhywhy/quota-guard";`,
           `import "@shuangwhywhy/quota-guard/register";`,
-          `setConfig(${JSON.stringify(finalConfig)});`
+          `// Layered initialization: Base File < Env File < Plugin Options`,
+          `setConfig(${JSON.stringify(fileConfig.base)}, ConfigSource.FileBase);`,
+          `setConfig(${JSON.stringify(fileConfig.specific)}, ConfigSource.FileEnv);`,
+          `setConfig(${JSON.stringify(options)}, ConfigSource.Plugin);`
         ].join('\n');
       }
       return null;

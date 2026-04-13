@@ -48,36 +48,35 @@ export const injectQuotaGuard = async (config?: Partial<QuotaGuardConfig> & { co
     ? (window as unknown as Record<string, unknown>).__QUOTA_GUARD_CONFIG__ as Partial<QuotaGuardConfig> | undefined
     : undefined;
   
-  // 3. Composite Merge (Hierarchy)
-  // 1: Plugin Args > 2: Env JSON > 3: Env File > 4: Base File > 5: Defaults > 6: Global Window
-  try {
-    const { quotaGuardMerger } = await import('./loader.js');
-    const { getDefaultConfig } = await import('./config.js');
-    
-    const mergedConfig = quotaGuardMerger(
-        config || {},                      // Level 1: Explicit Code Call / Plugin Configuration (Highest)
-        envVarConfig,                      // Level 2: Environment Variable JSON
-        fileConfig.specific,               // Level 3: Environment Config File
-        fileConfig.base,                   // Level 4: Base Config File
-        globalConfig || {},                // Level 5: Legacy/Generic UI Settings (Window)
-        getDefaultConfig()                 // Level 6: Defaults (Lowest)
-    );
-    
-    if (Object.keys(mergedConfig).length > 0) {
-      setConfig(mergedConfig as Partial<QuotaGuardConfig>);
+  // 3. Layered Application
+  // We call setConfig for each discovered layer. 
+  // The internal registry handles the actual prioritized merge.
+  const { ConfigSource } = await import('./config.js');
+
+  if (globalConfig) {
+    setConfig(globalConfig, ConfigSource.Global);
+  }
+
+  if (fileConfig.base) {
+    setConfig(fileConfig.base, ConfigSource.FileBase);
+  }
+
+  if (fileConfig.specific) {
+    setConfig(fileConfig.specific, ConfigSource.FileEnv);
+  }
+
+  if (envVarConfig) {
+    setConfig(envVarConfig, ConfigSource.EnvVar);
+  }
+
+  if (config) {
+    // Note: 'config' contains both config options AND 'configPath'.
+    // We only pass the actual config options to setConfig.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { configPath, ...options } = config;
+    if (Object.keys(options).length > 0) {
+      setConfig(options, ConfigSource.Manual);
     }
-  } catch {
-    // Basic fallback for environments where loader is stripped
-    const { getDefaultConfig } = await import('./config.js');
-    const mergedConfig = { 
-        ...globalConfig, 
-        ...getDefaultConfig(), 
-        ...fileConfig.base,
-        ...fileConfig.specific,
-        ...envVarConfig,
-        ...config 
-    };
-    setConfig(mergedConfig);
   }
 
   // eslint-disable-next-line no-console

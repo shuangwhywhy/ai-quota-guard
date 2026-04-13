@@ -1,4 +1,26 @@
 import type { ICacheAdapter } from './cache/types.js';
+import { quotaGuardMerger } from './utils/merge.js';
+
+/**
+ * Priority-aware configuration sources.
+ * Higher values have higher priority and will override lower ones.
+ */
+export enum ConfigSource {
+  /** System-level hardcoded defaults (Lowest) */
+  Default = 0,
+  /** Legacy/Generic UI Settings via window global (Level 0.5) */
+  Global = 5,
+  /** Base configuration from .quotaguardrc (Level 1) */
+  FileBase = 10,
+  /** Environment-specific configuration from .quotaguardrc.[mode] (Level 2) */
+  FileEnv = 20,
+  /** Environment variable JSON (QUOTA_GUARD_CONFIG) (Level 3) */
+  EnvVar = 30,
+  /** Plugin orchestration options (Vite/Webpack) (Level 4) */
+  Plugin = 40,
+  /** Business code calls (injectQuotaGuard / setConfig) (Highest) */
+  Manual = 50,
+}
 
 export interface QuotaGuardRule {
   /** Matcher for the request. If it matches, the overrides are applied. */
@@ -83,14 +105,52 @@ export const getDefaultConfig = (): QuotaGuardConfig => {
   };
 };
 
+// --- Layered Configuration Engine ---
 
-let activeConfig: QuotaGuardConfig = getDefaultConfig();
+const configLayers: Map<ConfigSource, Partial<QuotaGuardConfig>> = new Map();
+let activeSnapshot: QuotaGuardConfig = getDefaultConfig();
 
-export const setConfig = (overrides: Partial<QuotaGuardConfig>) => {
-  activeConfig = { ...getDefaultConfig(), ...overrides };
+// Initialize with defaults
+configLayers.set(ConfigSource.Default, getDefaultConfig());
+
+/**
+ * Re-calculate the final active configuration snapshot by merging all layers
+ * from lowest priority to highest priority.
+ */
+function recalculateSnapshot() {
+  // 1. Get all active layers and sort them by their numeric Enum value (Low to High)
+  const sortedSources = Array.from(configLayers.keys()).sort((a, b) => a - b);
+  
+  // 2. Reduce them into a single configuration object.
+  // We start with an empty object so that the first layer (Default) sets the baseline.
+  let merged: Partial<QuotaGuardConfig> = {};
+  for (const source of sortedSources) {
+    const layer = configLayers.get(source);
+    if (layer) {
+      merged = quotaGuardMerger(layer, merged);
+    }
+  }
+  
+  activeSnapshot = merged as QuotaGuardConfig;
+}
+
+/**
+ * Apply configuration overrides from a specific source.
+ * Higher priority sources override lower ones regardless of call order.
+ * 
+ * @param overrides - Partial configuration to apply
+ * @param source - The source of this configuration. Defaults to ConfigSource.Manual (Highest).
+ */
+export const setConfig = (overrides: Partial<QuotaGuardConfig>, source: ConfigSource = ConfigSource.Manual) => {
+  configLayers.set(source, overrides);
+  recalculateSnapshot();
 };
 
-export const getConfig = (): QuotaGuardConfig => activeConfig;
+/**
+ * Get the current flattened active configuration.
+ * This is a high-performance getter that returns a pre-computed snapshot.
+ */
+export const getConfig = (): QuotaGuardConfig => activeSnapshot;
 
 /**
  * Helper to provide type safety and autocompletion for Quota Guard configuration.

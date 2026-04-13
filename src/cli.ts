@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import pkg from '../package.json';
-import { loadQuotaGuardConfig, quotaGuardMerger } from './loader.js';
+import { loadQuotaGuardConfig } from './loader.js';
+import { quotaGuardMerger } from './utils/merge.js';
 import { getDefaultConfig } from './config.js';
 
 // Professional self-healing: use build-time injection, fallback to package.json
