@@ -24,10 +24,10 @@ echo $PATH && export PATH && git branch --show-current
 ```
 
 ### 2. Task Categorization
-Analyze the user's request to determine the appropriate branch prefix:
+Analyze the user's request to determine the appropriate branch prefix according to the conventions in [branch-naming.md](file:///Users/yizhouqiang/MyProjects/AI/quota-guard/.agents/rules/branch-naming.md):
 - **`fix/`**: Resolving bugs, errors, or unexpected behavior.
 - **`feat/`**: Implementing new capabilities or major enhancements.
-- **`patch/`**: Minor tweaks, styling fixes, typo corrections, or direct documentation updates.
+- **`patch/`**: Minor tweaks, styling fixes, typo corrections, release preparation, or direct documentation updates.
 
 ### 3. Transition Logic
 

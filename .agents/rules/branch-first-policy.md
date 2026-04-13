@@ -14,10 +14,12 @@ To maintain repository integrity, all file modifications must strictly adhere to
    - Modifying files or executing **`git commit`** directly on `main` or `release` is strictly prohibited.
    - If identified on these branches, you MUST invoke the `branching-workflow.md` workflow to transition to a feature, fix, or patch branch.
 
-2. **Branch Naming Conventions**:
-   - **`fix/*`**: Used for bug fixes and patches.
-   - **`feat/*`**: Used for new features and enhancements.
-   - **`patch/*`**: Used for minor adjustments, documentation, or trivial fixes.
+2. **Branch Naming & Category Conventions**:
+   - All branches MUST strictly adhere to the patterns and lifecycles defined in [branch-naming.md](file:///Users/yizhouqiang/MyProjects/AI/quota-guard/.agents/rules/branch-naming.md).
+   - Dynamic branches MUST match the regex: `^(feat|fix|patch)\/[a-z0-9-]+$`.
+   - **`fix/*`**: Technical bug resolution.
+   - **`feat/*`**: New capabilities.
+   - **`patch/*`**: Minor adjustments and release preparation.
 
 3. **Contextual Continuity**:
    - If you are on an active development branch (`fix/`, `feat/`, `patch/`), verify the new task's affinity.
