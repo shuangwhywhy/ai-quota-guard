@@ -1,5 +1,7 @@
 # Changelog
 
+## [2.3.1](https://github.com/shuangwhywhy/ai-quota-guard/compare/v2.3.0...v2.3.1) (2026-04-13)
+
 ## [2.3.0](https://github.com/shuangwhywhy/ai-quota-guard/compare/v2.2.3...v2.3.0) (2026-04-13)
 
 ### Features
