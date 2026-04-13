@@ -51,8 +51,8 @@ The interface required for custom cache implementations.
 
 ```typescript
 interface ICacheAdapter {
-  get(key: string): Promise<SerializedCacheEntry | null>;
-  set(key: string, entry: SerializedCacheEntry, ttlMs: number): Promise<void>;
+  get(key: string, ttlMs: number): Promise<SerializedCacheEntry | null>;
+  set(key: string, entry: SerializedCacheEntry): Promise<void>;
   delete(key: string): Promise<void>;
   clear(): Promise<void>;
 }

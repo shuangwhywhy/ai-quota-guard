@@ -17,10 +17,10 @@ Quota Guard searches for configuration in the following order of priority (1 = h
 | **7** | **Lowest** | **Embedded** | Built-in fallback settings defined in the library. |
 
 > [!TIP]
-> Use `qg run <command>` to automatically load your local configuration files and inject them into the environment as a high-priority Level 2 override.
+> Use `qg run <command>` to automatically load your local configuration files and inject them into the environment as a high-priority Level 3 override.
 
 > [!NOTE]
-> Environment-specific files (`Level 2`) are only loaded if `process.env.NODE_ENV` (or a custom env passed to the loader) matches the file suffix.
+> Environment-specific files (Level 4) are only loaded if `process.env.NODE_ENV` (or a custom env passed to the loader) matches the file suffix.
 
 ---
 

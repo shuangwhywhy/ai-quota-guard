@@ -31,7 +31,7 @@ export default {
   // Cache for 24 hours during deep work sessions
   cacheTtlMs: 1000 * 60 * 60 * 24, 
   // Ensure we save to disk so it survives server restarts
-  cacheAdapter: 'file', 
+  cacheAdapter: new FileCache(), 
 };
 ```
 

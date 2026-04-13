@@ -62,7 +62,7 @@ Unlike traditional AI gateways or observability platforms, Quota Guard focuses e
 
 - **[Getting Started](./getting-started.md)**: Jump from 0 to 1 with Node.js and Frontend integrations.
 - **[Core Scenarios](./scenarios.md)**: Deep dive into HMR protection, workflow debugging, and infinite loop prevention.
-- **[Configuration Guide](./configuration.md)**: Master the 6-level configuration hierarchy.
+- **[Configuration Guide](./configuration.md)**: Master the 7-level configuration hierarchy.
 - **[Advanced Setup](./advanced.md)**: Custom interceptors, stream broadcasting, and complex key generation.
 - **[API Reference](./api.md)**: Detailed types and function signatures for power users.
 

@@ -37,17 +37,7 @@ Open your browser's **Network Tab** to see the magic.
 
 ---
 
-## 3. The CLI Documentation Hub
-The easiest way to explore documentation and examples is through our built-in CLI. This works anywhere, even if Quota Guard is installed as a dependency.
-
-```bash
-# Start the interactive documentation center
-npx qg docs
-```
-
----
-
-## 4. Copy-Paste Sandbox
+## 3. Copy-Paste Sandbox
 Want to try it right now? Create a file named `test-guard.mjs`:
 
 ```javascript
