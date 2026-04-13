@@ -1,6 +1,9 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
+# Ensure Node/npm is in PATH for macOS/Brew environments
+export PATH="$PATH:/usr/local/bin:/opt/homebrew/bin"
+
 branch="$(git rev-parse --abbrev-ref HEAD)"
 
 if [ "$branch" = "main" ]; then
@@ -8,3 +11,6 @@ if [ "$branch" = "main" ]; then
   echo "Please use a feature/fix branch and submit a PR on GitHub."
   exit 1
 fi
+
+echo "🛡️ Running validation check before commit..."
+npm run validate
