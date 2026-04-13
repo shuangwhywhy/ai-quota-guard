@@ -63,6 +63,10 @@ export interface QuotaGuardConfig {
   keyHeaders?: string[];
   /** Headers that, if present, trigger a cache bypass (Safety Guards still apply). */
   bypassCacheHeaders?: string[];
+  /** Whether to show the real-time terminal dashboard. Default: false */
+  showDashboard?: boolean;
+  /** Whether to log each interception to the console. Default: true in dev */
+  consoleLog?: boolean;
 }
 
 
@@ -102,6 +106,8 @@ export const getDefaultConfig = (): QuotaGuardConfig => {
     rules: [],
     keyHeaders: [],
     bypassCacheHeaders: ['cache-control', 'pragma', 'x-quota-guard-bypass'],
+    showDashboard: false,
+    consoleLog: !isProd,
   };
 };
 

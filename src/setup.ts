@@ -1,5 +1,6 @@
-import { setConfig, QuotaGuardConfig } from './config.js';
+import { setConfig, QuotaGuardConfig, getConfig } from './config.js';
 import { applyGlobalGuards } from './core/interceptor.js';
+import { startDashboard } from './utils/dashboard.js';
 
 export const injectQuotaGuard = async (config?: Partial<QuotaGuardConfig> & { configPath?: string }) => {
   const isProd = typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'production';
@@ -77,6 +78,11 @@ export const injectQuotaGuard = async (config?: Partial<QuotaGuardConfig> & { co
     if (Object.keys(options).length > 0) {
       setConfig(options, ConfigSource.Manual);
     }
+  }
+
+  // 4. Start Dashboard if enabled
+  if (getConfig().showDashboard) {
+    startDashboard();
   }
 
   // eslint-disable-next-line no-console

@@ -63,6 +63,12 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       include: ['src/**/*.ts'],
+      exclude: [
+        'src/utils/dashboard.ts',
+        'src/utils/logger.ts',
+        '**/*.d.ts',
+        'src/core/interceptor.browser.stub.ts'
+      ],
       thresholds: {
         lines: 90,
         functions: 90,

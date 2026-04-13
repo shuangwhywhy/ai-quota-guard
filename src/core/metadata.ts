@@ -3,6 +3,7 @@ import type { ResponseBroadcaster } from '../streams/broadcaster';
 export interface RequestMetadata {
   key?: string;
   resolveBroadcaster?: (b: ResponseBroadcaster) => void;
+  requestBody?: string;
 }
 
 /**

@@ -11,6 +11,9 @@ import { ResponseBroadcaster } from '../streams/broadcaster.js';
 import { bufferToBase64 } from '../utils/encoding.js';
 
 import { getMetadata, setMetadata } from './metadata.js';
+import { globalStats } from '../utils/stats-collector.js';
+import { logIntercept } from '../utils/logger.js';
+import { computeUsage } from '../providers/token-parser.js';
 
 // Conditional import for Node-only interceptor to avoid browser bundling issues
 type ClientRequestInterceptorType = new () => Interceptor<HttpRequestEventMap>;
@@ -103,10 +106,47 @@ export const applyGlobalGuards = async () => {
         } else {
           controller.respondWith(Response.error());
         }
+        
+        if (result.key) {
+           globalStats.record({
+             type: 'BREAKER',
+             key: result.key,
+             url: request.url,
+             hostname: new URL(request.url).hostname
+           });
+           if (getConfig().consoleLog) logIntercept('BREAKER', result.key, request.url);
+        }
         return;
       }
 
       if (result.response) {
+        // HIT or SHARED from cache/in-flight
+        if (result.key) {
+          const status = result.status || 'HIT';
+          
+          // For cached hits, we can estimate tokens from the response immediately
+          (async () => {
+             try {
+                const clonedRes = result.response!.clone();
+                const isJson = clonedRes.headers.get('content-type')?.includes('application/json');
+                const resBody = isJson ? await clonedRes.json().catch(() => clonedRes.text()) : await clonedRes.text();
+                const reqBody = await request.clone().text().catch(() => null);
+                const usage = computeUsage(reqBody, resBody);
+                
+                globalStats.record({
+                  type: status,
+                  key: result.key!,
+                  url: request.url,
+                  hostname: new URL(request.url).hostname,
+                  usage
+                });
+                if (getConfig().consoleLog) logIntercept(status, result.key!, request.url, `${usage.totalTokens} tokens ${usage.isEstimated ? '(est.)' : ''}`);
+             } catch {
+                // Silently ignore parsing errors for logging
+             }
+          })();
+        }
+
         // XHR Transport Compatibility:
         // Some environments (like JSDOM or older browsers) cannot handle a ReadableStream body 
         // being piped into a simulated XMLHttpRequest. To be 'solid', we buffer the response 
@@ -132,7 +172,8 @@ export const applyGlobalGuards = async () => {
         emitAudit({ type: 'live_called', key: result.key, url: request.url, timestamp: Date.now() });
         setMetadata(request, { 
           key: result.key, 
-          resolveBroadcaster: result.resolveBroadcaster 
+          resolveBroadcaster: result.resolveBroadcaster,
+          requestBody: await request.clone().text() // Capture for token counting later
         });
 
         // Loop Prevention: We use a custom header to bypass our own interceptor for this internal redirection.
@@ -202,6 +243,26 @@ export const applyGlobalGuards = async () => {
           if (response.ok) {
             globalBreaker.recordSuccess(key);
             await activeCache.set(key, cacheData);
+            
+            // Record LIVE stats
+            const reqBody = (meta as RequestMetadata).requestBody;
+            let resBody: unknown;
+            try {
+              const decoded = new TextDecoder().decode(buffer);
+              resBody = JSON.parse(decoded);
+            } catch {
+              resBody = new TextDecoder().decode(buffer);
+            }
+            const usage = computeUsage(reqBody || null, resBody);
+            
+            globalStats.record({
+              type: 'LIVE',
+              key,
+              url: request.url,
+              hostname: new URL(request.url).hostname,
+              usage
+            });
+            if (getConfig().consoleLog) logIntercept('LIVE', key, request.url, `${usage.totalTokens} tokens ${usage.isEstimated ? '(est.)' : ''}`);
           } else {
             globalBreaker.recordFailure(key);
             emitAudit({ type: 'request_failed', key, url: request.url, timestamp: Date.now(), details: { status: response.status } });
@@ -255,6 +316,29 @@ export const createFetchInterceptor = (nativeFetch: typeof globalThis.fetch) => 
       }
 
       if (result.response) {
+        if (result.key) {
+           const status = result.status || 'HIT';
+           (async () => {
+             try {
+               const clonedRes = (result.response as Response).clone();
+               const isJson = clonedRes.headers.get('content-type')?.includes('application/json');
+               const resBody = isJson ? await clonedRes.json().catch(() => clonedRes.text()) : await clonedRes.text();
+               const reqBody = await pipelineRequest.text().catch(() => null);
+               const usage = computeUsage(reqBody, resBody);
+               
+               globalStats.record({
+                 type: status,
+                 key: result.key!,
+                 url: pipelineRequest.url,
+                 hostname: new URL(pipelineRequest.url).hostname,
+                 usage
+               });
+               if (getConfig().consoleLog) logIntercept(status, result.key!, pipelineRequest.url, `${usage.totalTokens} tokens ${usage.isEstimated ? '(est.)' : ''}`);
+             } catch {
+               // Silently ignore
+             }
+           })();
+        }
         return result.response;
       }
       
@@ -273,7 +357,7 @@ export const createFetchInterceptor = (nativeFetch: typeof globalThis.fetch) => 
       response = await nativeFetch(input, init);
     } catch (err: unknown) {
       if (key) {
-        const errorObject = err as Record<string, unknown> | null;
+        const errorObject = err as { name?: string; message?: string } | null;
         const errorName = errorObject?.name || (err instanceof Error ? err.name : 'Unknown');
         if (errorName === 'AbortError' || errorName === 'CanceledError' || (errorObject?.message && String(errorObject.message).includes('aborted'))) {
           emitAudit({ type: 'request_aborted', key, url: pipelineRequest.url, timestamp: Date.now() });
@@ -327,6 +411,26 @@ export const createFetchInterceptor = (nativeFetch: typeof globalThis.fetch) => 
             if (response.ok) {
               globalBreaker.recordSuccess(key!);
               await activeCache.set(key!, cacheData);
+              
+              // Record LIVE stats
+              const reqBody = await pipelineRequest.clone().text().catch(() => null);
+              let resBody: unknown;
+              try {
+                const decoded = new TextDecoder().decode(buffer);
+                resBody = JSON.parse(decoded);
+              } catch {
+                resBody = new TextDecoder().decode(buffer);
+              }
+              const usage = computeUsage(reqBody || null, resBody);
+              
+              globalStats.record({
+                type: 'LIVE',
+                key: key!,
+                url: pipelineRequest.url,
+                hostname: new URL(pipelineRequest.url).hostname,
+                usage
+              });
+              if (getConfig().consoleLog) logIntercept('LIVE', key!, pipelineRequest.url, `${usage.totalTokens} tokens ${usage.isEstimated ? '(est.)' : ''}`);
             } else {
               globalBreaker.recordFailure(key!);
             }

@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Lock main branch
+node scripts/lock-main.mjs
+
+# Run quality checks
+npm run lint
+npm test
