@@ -9,3 +9,9 @@ do
     exit 1
   fi
 done
+
+# Ensure Node/npm is in PATH for macOS/Brew environments
+export PATH="$PATH:/usr/local/bin:/opt/homebrew/bin"
+
+echo "🛡️ Running validation check before push (Pre-PR requirement)..."
+npm run validate
