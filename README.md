@@ -60,7 +60,8 @@ The recommended way to use Quota Guard is via the **CLI runner**. This approach 
 
 ```bash
 # Initialize config (once)
-npx qg init
+npx qg init           # Creates .quotaguardrc.ts
+npx qg init dev       # Creates .quotaguardrc.dev.ts
 
 # Wrap your dev server
 npx qg npm run dev

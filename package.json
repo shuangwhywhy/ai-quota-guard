@@ -44,11 +44,12 @@
     "test:smoke": "node scripts/smoke-test.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "pre-release:gate": "node scripts/pre-release-gate.mjs",
+    "validate": "node scripts/validate.mjs",
     "release": "dotenv -- release-it --ci",
     "release:interactive": "dotenv -- release-it",
     "release:only-publish": "dotenv -- release-it --ci --no-increment --git.commit=false --git.tag=false --git.push=false",
-    "docs": "open https://github.com/shuangwhywhy/ai-quota-guard/wiki"
+    "docs": "open https://github.com/shuangwhywhy/ai-quota-guard/wiki",
+    "prepare": "husky install"
   },
   "keywords": [
     "ai",
@@ -91,6 +92,7 @@
     "@vitest/coverage-v8": "^4.1.4",
     "dotenv-cli": "^8.0.0",
     "eslint": "^10.2.0",
+    "husky": "^9.0.11",
     "jsdom": "^29.0.2",
     "playwright": "^1.59.1",
     "release-it": "^19.2.4",
