@@ -98,7 +98,18 @@ describe('Quota Guard CLI', () => {
         await main(['init'], '/tmp-test');
         expect(fs.writeFileSync).toHaveBeenCalledWith(
             path.join('/tmp-test', '.quotaguardrc.ts'),
-            expect.stringContaining('defineConfig'),
+            expect.stringContaining('api.openai.com'),
+            'utf8'
+        );
+        expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('initialized'));
+    });
+
+    it('successfully initializes config with environment', async () => {
+        vi.spyOn(fs, 'existsSync').mockReturnValue(false);
+        await main(['init', 'dev'], '/tmp-test');
+        expect(fs.writeFileSync).toHaveBeenCalledWith(
+            path.join('/tmp-test', '.quotaguardrc.dev.ts'),
+            expect.stringContaining('api.openai.com'),
             'utf8'
         );
         expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('initialized'));

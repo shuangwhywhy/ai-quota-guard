@@ -95,7 +95,7 @@
     "clui": "^0.3.6",
     "dotenv-cli": "^8.0.0",
     "eslint": "^10.2.0",
-    "husky": "^8.0.0",
+    "husky": "^9.0.11",
     "jsdom": "^29.0.2",
     "log-update": "^8.0.0",
     "playwright": "^1.59.1",

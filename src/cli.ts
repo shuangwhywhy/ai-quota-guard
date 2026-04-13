@@ -22,9 +22,19 @@ export default defineConfig({
 
   /**
    * List of hostnames (strings or regex objects) to intercept.
-   * By default, it intercepts major providers (OpenAI, Anthropic, DeepSeek, Google, etc.).
+   * By default, it intercepts major providers.
    */
-  aiEndpoints: [],
+  aiEndpoints: [
+    'api.openai.com',
+    'api.anthropic.com',
+    'api.deepseek.com',
+    'generativelanguage.googleapis.com',
+    'api.cohere.ai',
+    'api.mistral.ai',
+    'api.groq.com',
+    'api.perplexity.ai',
+    'oai.huggingface.co'
+  ],
 
   /**
    * Debug cache TTL in milliseconds.
@@ -39,6 +49,11 @@ export default defineConfig({
   cacheKeyStrategy: 'intelligent',
 
   /**
+   * Custom fields to extract in 'intelligent' mode if provider is not auto-detected.
+   */
+  intelligentFields: ['model', 'messages', 'prompt', 'system', 'contents', 'message', 'response_format'],
+
+  /**
    * Aggregation window in ms to merge identical in-flight requests.
    * Helps prevent "thundering herd" during UI re-renders.
    */
@@ -47,16 +62,7 @@ export default defineConfig({
   /**
    * Specific behavioral rules for targeting subsets of requests.
    */
-  rules: [
-    {
-      match: {
-        url: /v1\\/chat\\/completions/,
-      },
-      override: {
-        cacheTtlMs: 86400000, // Cache chat for 24 hours
-      }
-    }
-  ]
+  rules: []
 });
 `;
 
@@ -106,14 +112,14 @@ async function runWithGuard(args: string[], cwd: string) {
 
   // 3. Determine Node injection flag (register entry point)
   const registerPath = '@shuangwhywhy/quota-guard/register';
-  
+
   // Node >= 20.6.0 supports --import
   const nodeVersion = process.versions.node;
   const majorVersion = parseInt(nodeVersion.split('.')[0], 10);
   const isModern = majorVersion > 20 || (majorVersion === 20 && parseInt(nodeVersion.split('.')[1], 10) >= 6);
-  
+
   const injectionFlag = isModern ? `--import ${registerPath}` : `--loader ${registerPath}`;
-  
+
   if (newEnv.NODE_OPTIONS) {
     newEnv.NODE_OPTIONS = `${injectionFlag} ${newEnv.NODE_OPTIONS}`;
   } else {
@@ -145,7 +151,7 @@ AI Quota Guard CLI v${VERSION}
 Usage:
   qg [options] <cmd>          Run a command with Quota Guard (implicit run)
   qg run [options] <cmd>      Run a command with Quota Guard (explicit run)
-  qg init                     Create a .quotaguardrc.ts configuration file
+  qg init [env]               Create a .quotaguardrc.[env].ts configuration file
   qg version                  Show version
 
 Options:
@@ -156,9 +162,12 @@ Options:
 
 Examples:
   qg node app.js              (Implicit run)
+  qg dev                      (If "dev" script exists in package.json, runs "npm run dev")
   qg --dashboard dev          (Run dev script with dashboard)
-  qg run npm start            (Explicit run)
+  qg npm start                (Explicit run)
   qg -- node app.js           (Using delimiter)
+  qg init dev                 (Initialize development specific config)
+
 `);
     return;
   }
@@ -169,7 +178,8 @@ Examples:
   }
 
   if (command === 'init') {
-    const filename = '.quotaguardrc.ts';
+    const env = argv[1];
+    const filename = env ? `.quotaguardrc.${env}.ts` : '.quotaguardrc.ts';
     const targetPath = path.join(cwd, filename);
 
     if (fs.existsSync(targetPath)) {
