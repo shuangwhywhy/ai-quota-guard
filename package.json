@@ -1,6 +1,6 @@
 {
   "name": "@shuangwhywhy/quota-guard",
-  "version": "2.2.3",
+  "version": "2.3.0",
   "description": "Zero-intrusion guard for LLM calls in dev: dedupe, cache, and protect AI requests across Node, browser, and Vite.",
   "repository": {
     "type": "git",
