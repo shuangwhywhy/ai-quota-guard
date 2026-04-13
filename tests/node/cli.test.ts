@@ -255,6 +255,63 @@ describe('Quota Guard CLI', () => {
             exitHandler(42);
             expect(mockExit).toHaveBeenCalledWith(42);
         });
+
+        describe('CLI Flags', () => {
+            it('supports --dashboard flag', async () => {
+                const mockSpawn = vi.mocked(spawn);
+                await main(['--dashboard', 'node', 'app.js']);
+
+                expect(mockSpawn).toHaveBeenCalled();
+                const [cmd, args, options] = mockSpawn.mock.calls[0];
+                expect(cmd).toBe('node');
+                expect(args).toEqual(['app.js']);
+                expect(options.env.QUOTA_GUARD_CONFIG).toContain('"showDashboard":true');
+            });
+
+            it('supports --no-dashboard flag', async () => {
+                const mockSpawn = vi.mocked(spawn);
+                await main(['--no-dashboard', 'node', 'app.js']);
+
+                expect(mockSpawn).toHaveBeenCalled();
+                const [cmd, args, options] = mockSpawn.mock.calls[0];
+                expect(cmd).toBe('node');
+                expect(args).toEqual(['app.js']);
+                expect(options.env.QUOTA_GUARD_CONFIG).toContain('"showDashboard":false');
+            });
+
+            it('supports mixed flags and command arguments', async () => {
+                const mockSpawn = vi.mocked(spawn);
+                await main(['--dashboard', 'node', 'app.js', '--port', '3000']);
+
+                const [cmd, args, options] = mockSpawn.mock.calls[0];
+                expect(cmd).toBe('node');
+                expect(args).toEqual(['app.js', '--port', '3000']);
+                expect(options.env.QUOTA_GUARD_CONFIG).toContain('"showDashboard":true');
+            });
+
+            it('stops parsing QG flags at first non-flag argument', async () => {
+                const mockSpawn = vi.mocked(spawn);
+                // Here --dashboard is an argument for node, not for qg
+                await main(['node', '--dashboard', 'app.js']);
+
+                const [cmd, args, options] = mockSpawn.mock.calls[0];
+                expect(cmd).toBe('node');
+                expect(args).toEqual(['--dashboard', 'app.js']);
+                // Default is false
+                expect(options.env.QUOTA_GUARD_CONFIG).toContain('"showDashboard":false');
+            });
+
+            it('supports -- delimiter to stop parsing flags', async () => {
+                const mockSpawn = vi.mocked(spawn);
+                // Here --dashboard is protected by --
+                await main(['--', '--dashboard', 'node', 'app.js']);
+
+                const [cmd, args, options] = mockSpawn.mock.calls[0];
+                expect(cmd).toBe('--dashboard');
+                expect(args).toEqual(['node', 'app.js']);
+                expect(options.env.QUOTA_GUARD_CONFIG).toContain('"showDashboard":false');
+            });
+        });
     });
 
     it('handles thrown errors in catch block via isMain branch', async () => {

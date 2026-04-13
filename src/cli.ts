@@ -6,7 +6,7 @@ import { spawn } from 'node:child_process';
 import pkg from '../package.json';
 import { loadQuotaGuardConfig } from './loader.js';
 import { quotaGuardMerger } from './utils/merge.js';
-import { getDefaultConfig } from './config.js';
+import { getDefaultConfig, type QuotaGuardConfig } from './config.js';
 
 // Professional self-healing: use build-time injection, fallback to package.json
 const VERSION = typeof PKG_VERSION !== 'undefined' ? PKG_VERSION : pkg.version;
@@ -64,7 +64,28 @@ export default defineConfig({
  * Execute a command with Quota Guard injected via NODE_OPTIONS.
  */
 async function runWithGuard(args: string[], cwd: string) {
-  if (args.length === 0) {
+  const finalArgs = [...args];
+  const overrides: Partial<QuotaGuardConfig> = {};
+
+  // Parse QG specific flags
+  while (finalArgs.length > 0 && finalArgs[0].startsWith('--')) {
+    const flag = finalArgs[0];
+    if (flag === '--dashboard') {
+      overrides.showDashboard = true;
+      finalArgs.shift();
+    } else if (flag === '--no-dashboard') {
+      overrides.showDashboard = false;
+      finalArgs.shift();
+    } else if (flag === '--') {
+      finalArgs.shift();
+      break;
+    } else {
+      // Allow other flags to pass through to the child command
+      break;
+    }
+  }
+
+  if (finalArgs.length === 0) {
     console.error('Error: No command provided.');
     process.exit(1);
   }
@@ -73,6 +94,7 @@ async function runWithGuard(args: string[], cwd: string) {
   const env = process.env.NODE_ENV || 'development';
   const fileConfigs = await loadQuotaGuardConfig(env, undefined, cwd);
   const finalConfig = quotaGuardMerger(
+    overrides, // CLI flags have highest priority
     fileConfigs.specific || {},
     fileConfigs.base || {},
     getDefaultConfig()
@@ -99,7 +121,7 @@ async function runWithGuard(args: string[], cwd: string) {
   }
 
   // 4. Spawn child process
-  const child = spawn(args[0], args.slice(1), {
+  const child = spawn(finalArgs[0], finalArgs.slice(1), {
     cwd,
     env: newEnv,
     stdio: 'inherit',
@@ -121,16 +143,22 @@ export async function main(argv = process.argv.slice(2), cwd = process.cwd()) {
 AI Quota Guard CLI v${VERSION}
 
 Usage:
-  qg <cmd>          Run a command with Quota Guard (implicit run)
-  qg run <cmd>      Run a command with Quota Guard (explicit run)
-  qg init           Create a .quotaguardrc.ts configuration file
-  qg version        Show version
+  qg [options] <cmd>          Run a command with Quota Guard (implicit run)
+  qg run [options] <cmd>      Run a command with Quota Guard (explicit run)
+  qg init                     Create a .quotaguardrc.ts configuration file
+  qg version                  Show version
+
+Options:
+  --dashboard                 Enable real-time terminal dashboard
+  --no-dashboard              Disable real-time terminal dashboard
+  -v, --version               Show version
+  -h, --help                  Show help
 
 Examples:
-  qg node app.js    (Implicit run)
-  qg dev            (If "dev" script exists in package.json, runs "npm run dev")
-  qg run npm start  (Explicit run)
-  qg -- node app.js (Using delimiter)
+  qg node app.js              (Implicit run)
+  qg --dashboard dev          (Run dev script with dashboard)
+  qg run npm start            (Explicit run)
+  qg -- node app.js           (Using delimiter)
 `);
     return;
   }
@@ -160,10 +188,6 @@ Examples:
   }
 
   if (command === 'run') {
-    return runWithGuard(argv.slice(1), cwd);
-  }
-
-  if (command === '--') {
     return runWithGuard(argv.slice(1), cwd);
   }
 
