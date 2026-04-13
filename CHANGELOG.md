@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.2.4](https://github.com/shuangwhywhy/ai-quota-guard/compare/v2.2.3...v2.2.4) (2026-04-13)
+
+### Features
+
+* **cli**: add support for dashboard command-line switches (`--dashboard`, `--no-dashboard`) and enable robust argument parsing with delimiter support ([d269cd0f](https://github.com/shuangwhywhy/ai-quota-guard/commit/d269cd0f))
+
 ## [2.2.3](https://github.com/shuangwhywhy/ai-quota-guard/compare/v2.2.2...v2.2.3) (2026-04-13)
 
 ## [2.2.2](https://github.com/shuangwhywhy/ai-quota-guard/compare/v2.2.1...v2.2.2) (2026-04-13)

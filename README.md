@@ -66,6 +66,7 @@ npx qg init
 npx qg npm run dev
 npx qg next dev
 npx qg dev             # Automatically detects your dev script
+npx qg --dashboard dev # Explicitly enable real-time dashboard
 ```
 
 > [!TIP]

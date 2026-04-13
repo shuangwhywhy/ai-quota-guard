@@ -10,7 +10,7 @@ Quota Guard searches for configuration in the following order of priority (1 = h
 | :--- | :--- | :--- | :--- |
 | **1** | **Highest** | **Manual** | In-code calls to `injectQuotaGuard({...})` or `setConfig({...})`. |
 | **2** | **High** | **Plugin** | Options passed to Vite or Webpack plugins. |
-| **3** | **Env Var** | **CLI/Env** | `QUOTA_GUARD_CONFIG` (JSON string). Automatically set by `qg run`. |
+| **3** | **Env Var** | **CLI/Env** | `QUOTA_GUARD_CONFIG` (JSON string). Automatically set by `qg run`. **(Includes CLI flags)** |
 | **4** | **Env File** | **Project Root** | `.quotaguardrc.[envName].[ext]` (e.g., `.quotaguardrc.production.ts`) |
 | **5** | **Project Base** | **Project Root** | `.quotaguardrc.[ext]` or `package.json` (via `quotaguard` key). |
 | **6** | **Global** | **Browser Window** | `window.__QUOTA_GUARD_CONFIG__` (Legacy/Generic UI settings). |
@@ -65,6 +65,11 @@ Quota Guard searches for configuration in the following order of priority (1 = h
 - **Type**: `string[]`
 - **Default**: `['model', 'messages', 'prompt', ...]`
 - **Description**: Fields extracted from the request body to generate the cache key. This ignores noise like `temperature`, ensuring `temperature: 0.7` and `temperature: 0.8` share the same cache for identical prompts.
+
+### `showDashboard`
+- **Type**: `boolean`
+- **Default**: `false`
+- **Description**: Whether to show the real-time terminal dashboard. Can be toggled via CLI flags `--dashboard` and `--no-dashboard`.
 
 ---
 

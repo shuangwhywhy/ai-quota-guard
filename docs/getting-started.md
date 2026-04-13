@@ -27,7 +27,14 @@ npx qg npm run dev
 npx qg next dev
 npx qg dev             # Magic: calls "npm run dev" automatically
 npx qg node app.js     # Implicitly runs with Quota Guard
+npx qg --dashboard dev # Explicitly enable real-time dashboard
 ```
+
+### CLI Flags
+The `qg` runner supports several flags to control its behavior without needing a configuration file:
+- `--dashboard`: Enable the real-time terminal dashboard for the session.
+- `--no-dashboard`: Disable the dashboard (even if enabled in config).
+- `--`: Use as a delimiter to stop parsing Quota Guard flags and pass everything else to your command (e.g., `qg -- --dashboard node app.js`).
 
 ### Why use the CLI?
 - **Zero Code Stain**: No need to `import` anything in your business logic.
