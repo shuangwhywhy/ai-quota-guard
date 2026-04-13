@@ -98,7 +98,7 @@ Powered by `@mswjs/interceptors`, Quota Guard captures `fetch`, `XMLHttpRequest`
 
 - **Deduplication**: Uses a custom `ResponseBroadcaster` to "tee" AI streams. Deduplicated requests receive identical stream chunks in real-time.
 - **Provider Intelligence**: Auto-detects major providers (OpenAI, Anthropic, Gemini, DeepSeek, etc.) to extract semantic fields for cache keys.
-- **6-Level Config**: Settings merge from CLI args, Env Vars, `.quotaguardrc.ts`, and project defaults.
+- **7-Level Config**: Settings merge from CLI args, Env Vars, `.quotaguardrc.ts`, and project defaults.
 
 ---
 
