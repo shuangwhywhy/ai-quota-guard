@@ -21,6 +21,26 @@ describe('StatsCollector URL Detection', () => {
     expect(urls).toContain('http://192.168.1.5:5173');
   });
 
+  it('detects 127.0.0.1 with ports', () => {
+    globalStats.addLog('Local: http://127.0.0.1:5173');
+    const urls = globalStats.getDetectedUrls();
+    expect(urls).toContain('http://127.0.0.1:5173');
+  });
+
+  it('detects custom hostnames with ports', () => {
+    globalStats.addLog('Service: http://my-internal-service.local:3000');
+    const urls = globalStats.getDetectedUrls();
+    expect(urls).toContain('http://my-internal-service.local:3000');
+  });
+
+  it('handles trailing punctuation correctly', () => {
+    globalStats.addLog('Check http://localhost:5173.');
+    globalStats.addLog('Visit http://127.0.0.1:8080/!');
+    const urls = globalStats.getDetectedUrls();
+    expect(urls).toContain('http://localhost:5173');
+    expect(urls).toContain('http://127.0.0.1:8080');
+  });
+
   it('strips ANSI escape codes before detection', () => {
     // Simulated Vite output with ANSI colors
     const coloredLog = '\x1B[32m  ➜\x1B[39m  \x1B[1mLocal\x1B[22m:   \x1B[36mhttp://localhost:3000/\x1B[39m';

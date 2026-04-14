@@ -82,15 +82,24 @@ export const renderDashboard = async () => {
         const debugUrls = globalStats.getDetectedUrls();
 
         // 0. Header & Debug URLs
+        const timeStr = `Last Updated: ${new Date().toLocaleTimeString()}`;
+        let urlStr = chalk.italic.gray('(No debug URLs found)');
+        let urlPlain = '(No debug URLs found)';
+        
+        if (debugUrls.length > 0) {
+            urlStr = `${chalk.bold.green('➜')} ${chalk.bold('App:')} ${debugUrls.map(u => chalk.cyan.underline(u)).join(', ')}`;
+            urlPlain = `➜ App: ${debugUrls.join(', ')}`;
+        }
+
+        // Calculate padding to push URL to the right
+        const paddingLength = Math.max(2, mainWidth - timeStr.length - urlPlain.length);
+        const padding = ' '.repeat(paddingLength);
+
         const header = [
             chalk.bold.white(`\n  🛡️  Quota Guard Real-time Dashboard`),
-            chalk.gray(`  Last Updated: ${new Date().toLocaleTimeString()}`)
+            chalk.gray(`  ${timeStr}${padding}${urlStr}`),
+            ''
         ];
-
-        if (debugUrls.length > 0) {
-            header.push(`  ${chalk.bold.green('➜')}  ${chalk.bold('App URLs:')} ${debugUrls.map(u => chalk.cyan.underline(u)).join(' | ')}`);
-        }
-        header.push('');
 
         // 1. Stats Table
         const colWidth = Math.floor(mainWidth / 3);

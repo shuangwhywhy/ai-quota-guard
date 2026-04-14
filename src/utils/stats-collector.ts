@@ -61,7 +61,7 @@ export class StatsCollector {
     // Strip ANSI codes first to make regex cleaner
     // eslint-disable-next-line no-control-regex
     const cleanMsg = msg.replace(/\u001b\[[0-9;]*m/g, '');
-    const urlRegex = /https?:\/\/(localhost|127\.0\.0\.1|[\w.-]+):\d+\/?/g;
+    const urlRegex = /https?:\/\/[^\s"'<>]+:\d+[^\s"'<>]*?(?=[.,?!]?(?:\s|$))/g;
     const matches = cleanMsg.match(urlRegex);
     if (matches) {
       matches.forEach(url => {
