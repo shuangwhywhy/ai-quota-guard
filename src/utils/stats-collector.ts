@@ -26,6 +26,7 @@ export class StatsCollector {
   private totalRequests = 0;
 
   private listeners: Array<(event: GuardEvent) => void> = [];
+  private logListeners: Array<(msg: string) => void> = [];
   private logBuffer: string[] = [];
   private readonly MAX_LOGS = 300; // Increased to allow a larger terminal output block
   private detectedUrls = new Set<string>();
@@ -53,11 +54,21 @@ export class StatsCollector {
     };
   }
 
+  public onLog(cb: (msg: string) => void) {
+    this.logListeners.push(cb);
+    return () => {
+      this.logListeners = this.logListeners.filter(l => l !== cb);
+    };
+  }
+
   public addLog(msg: string) {
     this.logBuffer.push(msg);
     if (this.logBuffer.length > this.MAX_LOGS) {
       this.logBuffer.shift();
     }
+
+    // Notify log listeners immediately for real-time dashboard updates
+    this.logListeners.forEach(l => l(msg));
 
     // Attempt to extract localhost/network URLs (common in Vite/Next.js output)
     // Strip ANSI codes first to make regex cleaner
@@ -80,8 +91,8 @@ export class StatsCollector {
       });
     }
 
-    // Notify log listeners (re-using the same listener for simplicity or separate if needed)
-    this.listeners.forEach(l => l({ type: 'HIT', url: '', hostname: '', key: '', timestamp: Date.now() })); // Trigger redraw
+    // Notify general listeners that state changed
+    this.listeners.forEach(l => l({ type: 'HIT', url: '', hostname: '', key: '', timestamp: Date.now() }));
   }
 
   public getLogs() {

@@ -1,8 +1,38 @@
 import { setConfig, QuotaGuardConfig, getConfig } from './config.js';
 import { applyGlobalGuards } from './core/interceptor.js';
 import { startDashboard } from './utils/dashboard.js';
+import { globalStats } from './utils/stats-collector.js';
 
 export const injectQuotaGuard = async (config?: Partial<QuotaGuardConfig> & { configPath?: string }) => {
+  // 0. Early Passive Log Capture (Pass-through mode)
+  // Ensure we record EVERYTHING from the very start, even before we know if dashboard is enabled.
+  if (typeof process !== 'undefined' && process.stdout && process.stdout.write) {
+    const originalWrite = process.stdout.write;
+    
+    process.stdout.write = function(
+        chunk: string | Uint8Array, 
+        encoding?: string | ((error?: Error | null) => void), 
+        callback?: (error?: Error | null) => void
+    ) {
+        const str = typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk);
+        globalStats.addLog(str);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return originalWrite.apply(process.stdout, [chunk, encoding as any, callback as any]);
+    };
+
+    const originalErrWrite = process.stderr.write;
+    process.stderr.write = function(
+        chunk: string | Uint8Array, 
+        encoding?: string | ((error?: Error | null) => void), 
+        callback?: (error?: Error | null) => void
+    ) {
+        const str = typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk);
+        globalStats.addLog(str); // Already flavored in dashboard if needed, but here it's raw
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return originalErrWrite.apply(process.stderr, [chunk, encoding as any, callback as any]);
+    };
+  }
+
   const isProd = typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'production';
 
   // 0. Production Safety Check: Absolutely no-op in production to prevent performance or security leakage.

@@ -28,7 +28,11 @@ const hijackStdio = () => {
     // @ts-expect-error - overriding native stdout.write
     process.stdout.write = (chunk: Uint8Array | string, encoding?: BufferEncoding | ((error?: Error | null) => void), callback?: (error?: Error | null) => void) => {
         const str = typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk);
+        
+        // Temporarily unsubscribe during the actual write to prevent recursion if we were to render here
+        // But since addLog handles listeners, we just add it.
         globalStats.addLog(str);
+
         const cb = typeof encoding === 'function' ? encoding : callback;
         if (cb) cb();
         return true;
@@ -37,7 +41,7 @@ const hijackStdio = () => {
     // @ts-expect-error - overriding native stderr.write
     process.stderr.write = (chunk: Uint8Array | string, encoding?: BufferEncoding | ((error?: Error | null) => void), callback?: (error?: Error | null) => void) => {
         const str = typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk);
-        globalStats.addLog(chalk.red(str));
+        globalStats.addLog(str); 
         const cb = typeof encoding === 'function' ? encoding : callback;
         if (cb) cb();
         return true;
@@ -222,8 +226,12 @@ export const startDashboard = async (intervalMs = 2000) => {
     // 2. Initial Draw
     await renderDashboard();
 
-    // 3. Real-time Subscription
+    // 3. Real-time Subscription (Requests & Logs)
     unsubscribe = globalStats.onRecord(() => {
+        renderDashboard();
+    });
+
+    const unsubscribeLog = globalStats.onLog(() => {
         renderDashboard();
     });
 
@@ -231,6 +239,13 @@ export const startDashboard = async (intervalMs = 2000) => {
     dashboardInterval = setInterval(() => {
         renderDashboard();
     }, intervalMs);
+
+    // Combine unsubscriptions
+    const originalUnsubscribe = unsubscribe;
+    unsubscribe = () => {
+        originalUnsubscribe?.();
+        unsubscribeLog();
+    };
 };
 
 /**
