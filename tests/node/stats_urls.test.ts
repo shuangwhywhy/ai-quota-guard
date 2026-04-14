@@ -7,6 +7,8 @@ describe('StatsCollector URL Detection', () => {
     // Using internal access to clear detectedUrls for clean tests
     // @ts-expect-error accessing private field for testing
     globalStats.detectedUrls.clear();
+    // @ts-expect-error accessing private field
+    globalStats.scanBuffer = '';
   });
 
   it('detects localhost URLs in logs', () => {
@@ -47,6 +49,14 @@ describe('StatsCollector URL Detection', () => {
     globalStats.addLog(coloredLog);
     const urls = globalStats.getDetectedUrls();
     expect(urls).toContain('http://localhost:3000');
+  });
+
+  it('detects fragmented URLs across multiple chunks', () => {
+    globalStats.addLog('Server started at http://127.');
+    globalStats.addLog('0.0.1:');
+    globalStats.addLog('8888/');
+    const urls = globalStats.getDetectedUrls();
+    expect(urls).toContain('http://127.0.0.1:8888');
   });
 
   it('detects multiple unique URLs', () => {

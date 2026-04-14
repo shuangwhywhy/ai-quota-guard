@@ -27,8 +27,10 @@ export class StatsCollector {
 
   private listeners: Array<(event: GuardEvent) => void> = [];
   private logBuffer: string[] = [];
-  private readonly MAX_LOGS = 100; // Increased for better visibility
+  private readonly MAX_LOGS = 300; // Increased to allow a larger terminal output block
   private detectedUrls = new Set<string>();
+  private scanBuffer = '';
+  private readonly MAX_SCAN_BUFFER = 4096;
 
   private constructor() {
     // 1-minute cleanup interval
@@ -61,8 +63,15 @@ export class StatsCollector {
     // Strip ANSI codes first to make regex cleaner
     // eslint-disable-next-line no-control-regex
     const cleanMsg = msg.replace(/\u001b\[[0-9;]*m/g, '');
-    const urlRegex = /https?:\/\/[^\s"'<>]+:\d+[^\s"'<>]*?(?=[.,?!]?(?:\s|$))/g;
-    const matches = cleanMsg.match(urlRegex);
+    
+    // Add to scan buffer to handle fragmented URLs across chunks
+    this.scanBuffer += cleanMsg;
+    if (this.scanBuffer.length > this.MAX_SCAN_BUFFER) {
+        this.scanBuffer = this.scanBuffer.slice(-this.MAX_SCAN_BUFFER);
+    }
+
+    const urlRegex = /https?:\/\/[^\s"'<>]+?:\d+(?:\/[^\s"'<>]*?)?(?=[.,?!]?(?:\s|$))/g;
+    const matches = this.scanBuffer.match(urlRegex);
     if (matches) {
       matches.forEach(url => {
         // Normalize URL (strip trailing slash)
