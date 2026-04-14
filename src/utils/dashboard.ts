@@ -73,18 +73,35 @@ export const renderDashboard = async () => {
             chalk = mod.default;
         }
 
+        const terminalWidth = process.stdout.columns || 80;
+        const mainWidth = Math.min(terminalWidth - 4, 120); // Cap at 120 for readability
+
         const { buffer, totals } = globalStats.getSnapshot();
         const rpm = globalStats.getFrequencyPerMinute();
         const logs = globalStats.getLogs();
+        const debugUrls = globalStats.getDetectedUrls();
+
+        // 0. Header & Debug URLs
+        const header = [
+            chalk.bold.white(`\n  🛡️  Quota Guard Real-time Dashboard`),
+            chalk.gray(`  Last Updated: ${new Date().toLocaleTimeString()}`)
+        ];
+
+        if (debugUrls.length > 0) {
+            header.push(`  ${chalk.bold.green('➜')}  ${chalk.bold('App URLs:')} ${debugUrls.map(u => chalk.cyan.underline(u)).join(' | ')}`);
+        }
+        header.push('');
 
         // 1. Stats Table
+        const colWidth = Math.floor(mainWidth / 3);
         const statsTable = new Table({
             head: [
                 chalk.blueBright('Metric'), 
                 chalk.blueBright('Total'), 
                 chalk.blueBright('Snapshot (1m)')
             ],
-            colWidths: [20, 20, 20]
+            colWidths: [colWidth, colWidth, colWidth],
+            wordWrap: true
         });
 
         statsTable.push(
@@ -100,7 +117,9 @@ export const renderDashboard = async () => {
                 chalk.magentaBright('Usage Category'), 
                 chalk.magentaBright('Tokens'), 
                 chalk.magentaBright('Percentage')
-            ]
+            ],
+            colWidths: [colWidth, colWidth, colWidth],
+            wordWrap: true
         });
 
         const total = totals.receivedTokens + totals.responseTokens;
@@ -112,14 +131,17 @@ export const renderDashboard = async () => {
             [chalk.cyanBright('Actual Network Spent'), totals.realSpentTokens, `${(100 - parseFloat(savedPct)).toFixed(1)}%`]
         );
 
-        // 3. Recent Activity (Last 5)
+        // 3. Recent Activity
+        const recentColWidth = Math.floor(mainWidth / 4);
         const recentTable = new Table({
             head: [
                 chalk.cyanBright('Time'),
                 chalk.cyanBright('Type'),
                 chalk.cyanBright('Host'),
                 chalk.cyanBright('Tokens')
-            ]
+            ],
+            colWidths: [recentColWidth, recentColWidth, recentColWidth, recentColWidth],
+            wordWrap: true
         });
 
         buffer.slice(-5).reverse().forEach(e => {
@@ -130,27 +152,28 @@ export const renderDashboard = async () => {
             recentTable.push([
                 time,
                 typeStr,
-                e.hostname.substring(0, 20),
+                e.hostname.substring(0, recentColWidth - 5),
                 e.usage ? String(e.usage.totalTokens) : '-'
             ]);
         });
 
-        // 4. Application Logs (Last 10 lines)
-        const logContent = logs.join('').split('\n').slice(-10).join('\n');
+        // 4. Application Logs
+        const logLinesAvailable = Math.max(10, (process.stdout.rows || 30) - 25);
+        const logContent = logs.join('').split('\n').slice(-logLinesAvailable).join('\n');
+        const separator = chalk.gray('─'.repeat(mainWidth));
 
         // Final Output Assembly
         const output = [
-            chalk.bold.white(`\n  🛡️  Quota Guard Real-time Dashboard`),
-            chalk.gray(`  Last Updated: ${new Date().toLocaleTimeString()}\n`),
+            ...header,
             statsTable.toString(),
             `\n  ${chalk.bold.magenta('💰 Token Efficiency')}`,
             savingsTable.toString(),
             `\n  ${chalk.bold.cyan('📡 Recent AI Activity')}`,
             recentTable.toString(),
             `\n  ${chalk.bold.yellow('📜 Application Logs')}`,
-            chalk.gray('──────────────────────────────────────────────────'),
+            separator,
             logContent || chalk.italic.gray('  (No logs captured yet)'),
-            chalk.gray('──────────────────────────────────────────────────'),
+            separator,
             `\n  ${chalk.gray('  (Press Ctrl+C to stop dashboard display)')}\n`
         ].join('\n');
 

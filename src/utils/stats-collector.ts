@@ -27,7 +27,8 @@ export class StatsCollector {
 
   private listeners: Array<(event: GuardEvent) => void> = [];
   private logBuffer: string[] = [];
-  private readonly MAX_LOGS = 50;
+  private readonly MAX_LOGS = 100; // Increased for better visibility
+  private detectedUrls = new Set<string>();
 
   private constructor() {
     // 1-minute cleanup interval
@@ -55,12 +56,30 @@ export class StatsCollector {
     if (this.logBuffer.length > this.MAX_LOGS) {
       this.logBuffer.shift();
     }
+
+    // Attempt to extract localhost/network URLs (common in Vite/Next.js output)
+    // Strip ANSI codes first to make regex cleaner
+    const cleanMsg = msg.replace(/\u001b\[[0-9;]*m/g, '');
+    const urlRegex = /https?:\/\/(localhost|127\.0\.0\.1|[\w.-]+):\d+\/?/g;
+    const matches = cleanMsg.match(urlRegex);
+    if (matches) {
+      matches.forEach(url => {
+        // Normalize URL (strip trailing slash)
+        const normalized = url.endsWith('/') ? url.slice(0, -1) : url;
+        this.detectedUrls.add(normalized);
+      });
+    }
+
     // Notify log listeners (re-using the same listener for simplicity or separate if needed)
     this.listeners.forEach(l => l({ type: 'HIT', url: '', hostname: '', key: '', timestamp: Date.now() })); // Trigger redraw
   }
 
   public getLogs() {
     return this.logBuffer;
+  }
+
+  public getDetectedUrls() {
+    return Array.from(this.detectedUrls);
   }
 
   public record(event: Omit<GuardEvent, 'timestamp'>) {
