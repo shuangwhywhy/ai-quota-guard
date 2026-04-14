@@ -1,6 +1,5 @@
 ---
-trigger: always_on
-glob: "**/*"
+trigger: model_decision
 description: Pre-execution environment validation and path propagation
 ---
 

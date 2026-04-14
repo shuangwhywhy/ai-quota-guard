@@ -1,6 +1,5 @@
 ---
-trigger: always_on
-glob: "**/*"
+trigger: model_decision
 description: Branch-first enforcement policy to prevent direct commits to protected branches and ensure contextual dev branches
 ---
 

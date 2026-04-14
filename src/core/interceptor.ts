@@ -83,6 +83,11 @@ export const applyGlobalGuards = async () => {
   });
 
   batchInterceptor.on('request', async ({ request, controller }) => {
+    // Loop Prevention: Bypass if this is our own internal redirect call
+    if (request.headers.get('x-quota-guard-internal') === 'true') {
+      return;
+    }
+
     // Handle Aborted Requests
     request.signal.addEventListener('abort', () => {
       const meta = getMetadata(request);
@@ -181,6 +186,9 @@ export const applyGlobalGuards = async () => {
           // IMPORTANT: We must respondWith so msw stops processing the original ClientRequest/XHR.
           const internalHeaders = new Headers(request.headers);
           internalHeaders.set('x-quota-guard-internal', 'true');
+          if (result.key) {
+            internalHeaders.set('x-quota-guard-key', result.key);
+          }
           
           const response = await fetch(request.url, {
             method: request.method,
@@ -205,7 +213,7 @@ export const applyGlobalGuards = async () => {
 
   batchInterceptor.on('response', async ({ response, request }) => {
     const meta = getMetadata(request);
-    const key = meta.key;
+    const key = meta.key || request.headers.get('x-quota-guard-key');
     if (!key) return;
 
     const resolveBroadcaster = meta.resolveBroadcaster;

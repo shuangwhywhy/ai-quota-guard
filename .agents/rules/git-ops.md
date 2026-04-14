@@ -1,7 +1,6 @@
 ---
-trigger: always_on
-glob: "**/*"
-description: "Git Operations and Branching Management Rules"
+trigger: model_decision
+description: Git Operations and Branching Management Rules
 ---
 
 # Git Operations Rules

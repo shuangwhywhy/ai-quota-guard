@@ -1,6 +1,5 @@
 ---
-trigger: always_on
-glob: "**/*"
+trigger: model_decision
 description: Definitive naming conventions and lifecycle rules for all repository branches
 ---
 

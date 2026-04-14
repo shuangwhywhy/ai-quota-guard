@@ -95,7 +95,7 @@ describe('Hardening Master (Node)', () => {
 
     it('covers interceptor abort & background failure branches', async () => {
         const { globalInFlightRegistry: registry } = await import('../../src/registry/in-flight');
-        const { getMetadata } = await import('../../src/core/metadata');
+        const { setMetadata } = await import('../../src/core/metadata');
         const mockPipeline = new GuardPipeline(vi.fn());
         __injectTestPipeline(mockPipeline);
         
@@ -103,60 +103,57 @@ describe('Hardening Master (Node)', () => {
         setConfig({ enabled: true, aiEndpoints: [/test-ai\.com/], auditHandler: vi.fn() });
 
         // 1. Abort Listener (Line 86)
-        vi.spyOn(mockPipeline, 'processRequest').mockResolvedValue({
-            key: 'abort-key',
-            status: 'LIVE',
-            resolveBroadcaster: () => {}
+        vi.spyOn(mockPipeline, 'processRequest').mockImplementation(async (req) => {
+            setMetadata(req, { key: 'abort-key' });
+            return new Promise(resolve => {
+                setTimeout(() => resolve({ key: 'abort-key', status: 'LIVE', resolveBroadcaster: () => {} }), 100);
+            });
         });
-        // @ts-expect-error: mocking metadata key
-        const metaSpy = vi.spyOn({ getMetadata }, 'getMetadata').mockReturnValue({ key: 'abort-key' });
-        // @ts-expect-error: mocking broadcaster state
-        registry.set('abort-key', {}, { url: 'u', method: 'M', headers: {} });
+        
+        // Ensure registry has it
+        registry.set('abort-key', {} as unknown as ResponseBroadcaster, { url: 'u', method: 'M', headers: {} });
 
         const controller = new AbortController();
         const p = fetch('https://abort-test-ai.com/chat', { signal: controller.signal });
+        // Wait for listener to attach
+        await new Promise(r => setTimeout(r, 20));
         controller.abort();
         await p.catch(() => {});
         
         // 2. Background Task Failure (Line 206)
-        vi.spyOn(mockPipeline, 'processRequest').mockResolvedValue({
-            key: 'fail-key',
-            status: 'LIVE',
-            resolveBroadcaster: () => {}
+        vi.spyOn(mockPipeline, 'processRequest').mockImplementation(async (req) => {
+            setMetadata(req, { key: 'fail-key' });
+            return { key: 'fail-key', status: 'LIVE', resolveBroadcaster: () => {} };
         });
-        // @ts-expect-error: mocking metadata key
-        metaSpy.mockReturnValue({ key: 'fail-key' });
-        const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+        const currentFetch = globalThis.fetch;
+        const fetchSpy = vi.fn().mockImplementation(async (input, init) => {
             const headers = new Headers(init?.headers);
             if (headers.get('x-quota-guard-internal') === 'true') {
                 return new Response('error', { status: 500 });
             }
             return new Response('ok');
         });
+        vi.stubGlobal('fetch', fetchSpy);
 
         await fetch('https://fail-test-ai.com/chat');
         
         // 3. Background Task Crash (Line 216 - outer catch)
-        vi.spyOn(mockPipeline, 'processRequest').mockResolvedValue({
-            key: 'crash-key',
-            status: 'LIVE',
-            resolveBroadcaster: () => {}
+        vi.spyOn(mockPipeline, 'processRequest').mockImplementation(async (req) => {
+            setMetadata(req, { key: 'crash-key' });
+            return { key: 'crash-key', status: 'LIVE', resolveBroadcaster: () => {} };
         });
-        // @ts-expect-error: mocking metadata key
-        metaSpy.mockReturnValue({ key: 'crash-key' });
         const bufferSpy = vi.spyOn(ResponseBroadcaster.prototype, 'getFinalBuffer').mockRejectedValue(new Error('crash'));
         
         await fetch('https://crash-test-ai.com/chat');
 
         // Cleanup and wait for background tasks
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise(r => setTimeout(r, 400));
         
         expect(registry.get('abort-key')).toBeUndefined();
         expect(registry.get('crash-key')).toBeUndefined();
         
-        fetchSpy.mockRestore();
+        vi.stubGlobal('fetch', currentFetch);
         bufferSpy.mockRestore();
-        metaSpy.mockRestore();
     });
 
     it('covers interceptor error & recovery (Line 82, 199-203, 209)', async () => {
