@@ -82,7 +82,7 @@ export const injectQuotaGuard = async (config?: Partial<QuotaGuardConfig> & { co
 
   // 4. Start Dashboard if enabled
   if (getConfig().showDashboard) {
-    startDashboard();
+    await startDashboard();
   }
 
   // eslint-disable-next-line no-console

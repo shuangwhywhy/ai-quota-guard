@@ -25,6 +25,10 @@ export class StatsCollector {
   private totalRealSpentTokens = 0;
   private totalRequests = 0;
 
+  private listeners: Array<(event: GuardEvent) => void> = [];
+  private logBuffer: string[] = [];
+  private readonly MAX_LOGS = 50;
+
   private constructor() {
     // 1-minute cleanup interval
     if (typeof setInterval !== 'undefined') {
@@ -37,6 +41,26 @@ export class StatsCollector {
       this.instance = new StatsCollector();
     }
     return this.instance;
+  }
+
+  public onRecord(cb: (event: GuardEvent) => void) {
+    this.listeners.push(cb);
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== cb);
+    };
+  }
+
+  public addLog(msg: string) {
+    this.logBuffer.push(msg);
+    if (this.logBuffer.length > this.MAX_LOGS) {
+      this.logBuffer.shift();
+    }
+    // Notify log listeners (re-using the same listener for simplicity or separate if needed)
+    this.listeners.forEach(l => l({ type: 'HIT', url: '', hostname: '', key: '', timestamp: Date.now() })); // Trigger redraw
+  }
+
+  public getLogs() {
+    return this.logBuffer;
   }
 
   public record(event: Omit<GuardEvent, 'timestamp'>) {
@@ -55,6 +79,9 @@ export class StatsCollector {
         this.totalRealSpentTokens += u.totalTokens;
       }
     }
+
+    // Notify listeners
+    this.listeners.forEach(l => l(fullEvent));
   }
 
   private cleanup() {
