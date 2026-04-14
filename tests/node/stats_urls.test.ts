@@ -98,11 +98,11 @@ describe('StatsCollector URL Detection', () => {
 
   it('covers log buffer overflow (MAX_LOGS)', () => {
     // Fill the buffer
-    for (let i = 0; i < 110; i++) {
+    for (let i = 0; i < 310; i++) {
         globalStats.addLog(`log ${i}`);
     }
     const logs = globalStats.getLogs();
-    expect(logs).toHaveLength(100); // MAX_LOGS is 100
+    expect(logs).toHaveLength(300); // MAX_LOGS is 300
     expect(logs[0]).toBe('log 10'); // Should have shifted out first 10
   });
 

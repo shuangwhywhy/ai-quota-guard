@@ -74,14 +74,15 @@ export const renderDashboard = async () => {
         }
 
         const terminalWidth = process.stdout.columns || 80;
-        const mainWidth = Math.min(terminalWidth - 4, 120); // Cap at 120 for readability
+        const terminalHeight = process.stdout.rows || 30;
+        const mainWidth = Math.min(terminalWidth - 4, 120);
 
         const { buffer, totals } = globalStats.getSnapshot();
         const rpm = globalStats.getFrequencyPerMinute();
         const logs = globalStats.getLogs();
         const debugUrls = globalStats.getDetectedUrls();
 
-        // 0. Header & Debug URLs
+        // 0. Header with Right-Aligned Debug Info
         const timeStr = `Last Updated: ${new Date().toLocaleTimeString()}`;
         let urlStr = chalk.italic.gray('(No debug URLs found)');
         let urlPlain = '(No debug URLs found)';
@@ -91,7 +92,6 @@ export const renderDashboard = async () => {
             urlPlain = `➜ App: ${debugUrls.join(', ')}`;
         }
 
-        // Calculate padding to push URL to the right
         const paddingLength = Math.max(2, mainWidth - timeStr.length - urlPlain.length);
         const padding = ' '.repeat(paddingLength);
 
@@ -153,7 +153,7 @@ export const renderDashboard = async () => {
             wordWrap: true
         });
 
-        buffer.slice(-5).reverse().forEach(e => {
+        buffer.slice(-3).reverse().forEach(e => { // Reduced to 3 to save space for logs
             const time = new Date(e.timestamp).toLocaleTimeString([], { hour12: false });
             const typeStr = e.type === 'LIVE' ? chalk.green('LIVE') : 
                           e.type === 'HIT' ? chalk.cyan('HIT') : 
@@ -166,10 +166,17 @@ export const renderDashboard = async () => {
             ]);
         });
 
-        // 4. Application Logs
-        const logLinesAvailable = Math.max(10, (process.stdout.rows || 30) - 25);
-        const logContent = logs.join('').split('\n').slice(-logLinesAvailable).join('\n');
+        // 4. Original Terminal Output (Dynamic Height)
+        // Estimate lines used by tables and headers (~22 lines)
+        const linesUsed = 24; 
+        const logLinesAvailable = Math.max(5, terminalHeight - linesUsed);
+        
+        // Prepare log content to maintain color and structure
         const separator = chalk.gray('─'.repeat(mainWidth));
+        
+        // We join parts of multi-line chunks to ensure we don't exceed window
+        const allLogLines = logs.join('').split('\n');
+        const displayLogs = allLogLines.slice(-logLinesAvailable).join('\n');
 
         // Final Output Assembly
         const output = [
@@ -179,11 +186,11 @@ export const renderDashboard = async () => {
             savingsTable.toString(),
             `\n  ${chalk.bold.cyan('📡 Recent AI Activity')}`,
             recentTable.toString(),
-            `\n  ${chalk.bold.yellow('📜 Application Logs')}`,
+            `\n  ${chalk.bold.yellow('📜 Original Terminal Output')}`,
             separator,
-            logContent || chalk.italic.gray('  (No logs captured yet)'),
+            displayLogs || chalk.italic.gray('  (Waiting for output...)'),
             separator,
-            `\n  ${chalk.gray('  (Press Ctrl+C to stop dashboard display)')}\n`
+            `\n  ${chalk.gray('  (Press Ctrl+C to stop dashboard)')}\n`
         ].join('\n');
 
         // To prevent logUpdate from using hijacked stdout, we need to temporarily restore or use originalWrite
@@ -198,7 +205,7 @@ export const renderDashboard = async () => {
         
         lastUpdate = logUpdate;
     } catch {
-        // If libraries fail to load (e.g. browser environment), just skip
+        // Fallback or ignore
     }
 };
 
