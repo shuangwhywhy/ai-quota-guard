@@ -113,7 +113,7 @@ export class ProxyServer {
 
       const targetUrl = `https://${targetHostname}${targetPath}`;
 
-      // 3. Proxy the Request using Node's native fetch (guarded by our interceptor)
+      // 5. Proxy the Request using Node's native fetch (guarded by our interceptor)
       try {
         const bodyChunks: Buffer[] = [];
         req.on('data', chunk => bodyChunks.push(chunk));
@@ -137,7 +137,7 @@ export class ProxyServer {
               duplex: 'half'
             });
 
-            // 4. Forward Response back to Client
+            // 6. Forward Response back to Client
             const resHeaders: Record<string, string> = {};
             response.headers.forEach((v, k) => {
                 if (k !== 'transfer-encoding' && k !== 'content-encoding') {
@@ -157,6 +157,15 @@ export class ProxyServer {
         res.writeHead(500);
         res.end(`Quota Guard Proxy Internal Error: ${String(err)}`);
       }
+    });
+
+    // Handle listen errors (e.g. port taken) explicitly
+    this.server.on('error', (err: Error) => {
+        const msg = `❌ Quota Guard Proxy Error: Failed to start on port ${this.port}. ${err.message}`;
+        globalStats.addLog(msg);
+        // We log to console as well because if the proxy fails, we want it clearly visible in the startup logs
+        // eslint-disable-next-line no-console
+        console.error(msg);
     });
 
     this.server.listen(this.port, () => {

@@ -23,9 +23,23 @@ export class RuntimeHijacker {
                 const originalWrite = res.write;
                 const originalEnd = res.end;
                 const originalSetHeader = res.setHeader;
+                const originalWriteHead = res.writeHead;
 
                 let isHtml = false;
                 let bodyBuffer = '';
+
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                res.writeHead = function(statusCode: number, ...args: any[]) {
+                    const headers = args[args.length - 1];
+                    if (headers && typeof headers === 'object') {
+                        const contentType = headers['content-type'] || headers['Content-Type'];
+                        if (contentType && String(contentType).includes('text/html')) {
+                            isHtml = true;
+                        }
+                    }
+                    // @ts-expect-error - Patching native method
+                    return originalWriteHead.apply(this, [statusCode, ...args]);
+                };
 
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 res.setHeader = function(name: string, value: any) {
