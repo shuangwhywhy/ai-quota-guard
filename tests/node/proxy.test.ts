@@ -1,12 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ProxyServer } from '../../src/utils/proxy.js';
 import { globalStats } from '../../src/utils/stats-collector.js';
+import { setConfig } from '../../src/config.js';
 import http from 'node:http';
 
 describe('ProxyServer', () => {
     let proxy: ProxyServer;
 
     beforeEach(() => {
+        setConfig({ proxyPort: 1990 });
         proxy = new ProxyServer();
         // Mock globalStats.record to avoid side effects
         vi.spyOn(globalStats, 'record').mockImplementation(() => {});
@@ -33,7 +35,7 @@ describe('ProxyServer', () => {
         proxy.start();
         const event = { type: 'HIT', url: 'test.com', hostname: 'test.com', key: '123' };
         
-        const response = await fetch('http://localhost:1989/__quota_guard_events', {
+        const response = await fetch('http://localhost:1990/__quota_guard_events', {
             method: 'POST',
             body: JSON.stringify(event)
         });
@@ -44,7 +46,7 @@ describe('ProxyServer', () => {
 
     it('rejects invalid telemetry data with 400', async () => {
         proxy.start();
-        const response = await fetch('http://localhost:1989/__quota_guard_events', {
+        const response = await fetch('http://localhost:1990/__quota_guard_events', {
             method: 'POST',
             body: 'invalid-json'
         });
@@ -53,7 +55,7 @@ describe('ProxyServer', () => {
 
     it('serves register.js with correct content type', async () => {
         proxy.start();
-        const response = await fetch('http://localhost:1989/register.js');
+        const response = await fetch('http://localhost:1990/register.js');
         // It might be 404 or 200 depending on if dist/ exists in the test env, 
         // but we test that it tries to return a response.
         expect([200, 404, 500]).toContain(response.status);
@@ -64,7 +66,7 @@ describe('ProxyServer', () => {
 
     it('handles CORS preflight (OPTIONS)', async () => {
         proxy.start();
-        const response = await fetch('http://localhost:1989/some-ai-endpoint', {
+        const response = await fetch('http://localhost:1990/some-ai-endpoint', {
             method: 'OPTIONS'
         });
         expect(response.status).toBe(204);
@@ -73,7 +75,7 @@ describe('ProxyServer', () => {
 
     it('returns 400 if target service cannot be determined', async () => {
         proxy.start();
-        const response = await fetch('http://localhost:1989/invalid-path-no-dots');
+        const response = await fetch('http://localhost:1990/invalid-path-no-dots');
         expect(response.status).toBe(400);
         const text = await response.text();
         expect(text).toContain('Could not determine target AI service');
@@ -91,7 +93,7 @@ describe('ProxyServer', () => {
 
         // Call the proxy using http instead of fetch to avoid triggering our global fetch spy
         await new Promise((resolve, reject) => {
-            const req = http.request('http://localhost:1989/api.openai.com/v1/chat/completions', { method: 'POST' }, (res) => {
+            const req = http.request('http://localhost:1990/api.openai.com/v1/chat/completions', { method: 'POST' }, (res) => {
                 res.on('data', () => {});
                 res.on('end', resolve);
             });

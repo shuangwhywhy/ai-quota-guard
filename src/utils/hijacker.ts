@@ -68,7 +68,7 @@ export class RuntimeHijacker {
                         const injection = `
 <!-- Quota Guard Zero-Intrusion Bridge -->
 <script>window.__QUOTA_GUARD_CONFIG__ = ${JSON.stringify(getConfig())};</script>
-<script src="http://localhost:1989/register.js"></script>
+<script src="http://localhost:${getConfig().proxyPort}/register.js"></script>
 <!-- End Quota Guard Bridge -->
 `;
                         let finalHtml = bodyBuffer;

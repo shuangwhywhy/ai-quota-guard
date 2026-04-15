@@ -4,6 +4,7 @@
  */
 
 import { TokenUsage } from '../providers/token-parser.js';
+import { getConfig } from '../config.js';
 
 export interface GuardEvent {
   timestamp: number;
@@ -133,7 +134,7 @@ export class StatsCollector {
     const isTest = isBrowser && ((window as any).process?.env?.NODE_ENV === 'test' || (window as any).VITEST || (window as any).__vitest_browser__);
 
     if (isBrowser && typeof fetch !== 'undefined' && !isTest) {
-      fetch('http://localhost:1989/__quota_guard_events', {
+      fetch(`http://localhost:${getConfig().proxyPort}/__quota_guard_events`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',

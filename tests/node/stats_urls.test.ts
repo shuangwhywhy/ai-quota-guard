@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { globalStats } from '../../src/utils/stats-collector.js';
+import { setConfig } from '../../src/config.js';
 
 describe('StatsCollector URL Detection', () => {
   beforeEach(() => {
@@ -9,6 +10,7 @@ describe('StatsCollector URL Detection', () => {
     globalStats.detectedUrls.clear();
     // @ts-expect-error accessing private field
     globalStats.scanBuffer = '';
+    setConfig({ proxyPort: 1990 });
   });
 
   it('detects localhost URLs in logs', () => {
@@ -146,7 +148,7 @@ describe('StatsCollector URL Detection', () => {
     });
 
     expect(fetchSpy).toHaveBeenCalledWith(
-      'http://localhost:1989/__quota_guard_events',
+      'http://localhost:1990/__quota_guard_events',
       expect.objectContaining({
         method: 'POST',
         body: expect.stringContaining('test-key')

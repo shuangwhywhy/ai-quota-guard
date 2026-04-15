@@ -8,7 +8,10 @@ import { getConfig } from '../config.js';
  */
 export class ProxyServer {
   private server: http.Server | null = null;
-  private readonly port = 1989;
+  
+  private get port() {
+    return getConfig().proxyPort || 1989;
+  }
 
   public start() {
     if (this.server) return;

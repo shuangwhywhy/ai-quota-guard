@@ -67,6 +67,8 @@ export interface QuotaGuardConfig {
   showDashboard?: boolean;
   /** Whether to log each interception to the console. Default: true in dev */
   consoleLog?: boolean;
+  /** Port for the local AI proxy bridge. Default: 1989 */
+  proxyPort?: number;
 }
 
 
@@ -108,6 +110,7 @@ export const getDefaultConfig = (): QuotaGuardConfig => {
     bypassCacheHeaders: ['cache-control', 'pragma', 'x-quota-guard-bypass'],
     showDashboard: false,
     consoleLog: !isProd,
+    proxyPort: 1989,
   };
 };
 
