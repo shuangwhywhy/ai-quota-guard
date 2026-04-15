@@ -128,7 +128,15 @@ async function runWithGuard(args: string[], cwd: string) {
     newEnv.NODE_OPTIONS = injectionFlag;
   }
 
-  // 4. Spawn child process
+  // 4. Start local AI proxy to support non-plugin browser interception
+  try {
+    const { globalProxy } = await import('./utils/proxy.js');
+    globalProxy.start();
+  } catch {
+    // Fail silently if proxy cannot start (e.g. port taken)
+  }
+
+  // 5. Spawn child process
   const child = spawn(finalArgs[0], finalArgs.slice(1), {
     cwd,
     env: newEnv,

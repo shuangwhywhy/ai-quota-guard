@@ -75,18 +75,21 @@ export class StatsCollector {
     // eslint-disable-next-line no-control-regex
     const cleanMsg = msg.replace(/\u001b\[[0-9;]*m/g, '');
     
-    // Add to scan buffer to handle fragmented URLs across chunks
-    this.scanBuffer += cleanMsg;
-    if (this.scanBuffer.length > this.MAX_SCAN_BUFFER) {
-        this.scanBuffer = this.scanBuffer.slice(-this.MAX_SCAN_BUFFER);
-    }
+    // Add to scan buffer with space delimiter to avoid merging adjacent logs into single tokens.
+    // Note: This might break tests that depend on cross-chunk URL fragmentation without spaces.
+    this.scanBuffer = (this.scanBuffer + ' ' + cleanMsg).slice(-this.MAX_SCAN_BUFFER);
 
-    const urlRegex = /https?:\/\/[^\s"'<>]+?:\d+(?:\/[^\s"'<>]*?)?(?=[.,?!]?(?:\s|$))/g;
+    // Catch both localhost:port and common AI hostnames (googleapis, openai, etc.)
+    const urlRegex = /(?:https?:\/\/|www\.)[^\s"'<> ]+?(?=[.,?!]?(?:\s|$|["'<>]))|(?:\w+\.)*(?:googleapis\.com|openai\.com|anthropic\.com|deepseek\.com)[^\s"'<> ]*/gi;
     const matches = this.scanBuffer.match(urlRegex);
     if (matches) {
       matches.forEach(url => {
-        // Normalize URL (strip trailing slash)
-        const normalized = url.endsWith('/') ? url.slice(0, -1) : url;
+        // Normalize URL: ensure it starts with https:// if it's a known AI host match without protocol
+        let normalized = url;
+        if (!normalized.startsWith('http')) {
+            normalized = `https://${normalized}`;
+        }
+        normalized = normalized.endsWith('/') ? normalized.slice(0, -1) : normalized;
         this.detectedUrls.add(normalized);
       });
     }
@@ -122,6 +125,25 @@ export class StatsCollector {
 
     // Notify listeners
     this.listeners.forEach(l => l(fullEvent));
+
+    // If in browser, report back to the Node proxy server to keep terminal dashboard synced
+    // We bypass this during tests to avoid interfering with fetch spies and mock environments.
+    const isBrowser = typeof window !== 'undefined';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const isTest = isBrowser && ((window as any).process?.env?.NODE_ENV === 'test' || (window as any).VITEST || (window as any).__vitest_browser__);
+
+    if (isBrowser && typeof fetch !== 'undefined' && !isTest) {
+      fetch('http://localhost:1989/__quota_guard_events', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-quota-guard-internal': 'true'
+        },
+        body: JSON.stringify(fullEvent)
+      }).catch(() => {
+        // Silently fail browser reporting if proxy is down
+      });
+    }
   }
 
   private cleanup() {

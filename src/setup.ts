@@ -84,8 +84,10 @@ export const injectQuotaGuard = async (config?: Partial<QuotaGuardConfig> & { co
     }
   }
 
-  // 4. Start Dashboard if enabled
+  // 4. Start Dashboard and Dev Helpers if enabled
   if (getConfig().showDashboard) {
+    const { RuntimeHijacker } = await import('./utils/hijacker.js');
+    RuntimeHijacker.apply();
     await startDashboard();
   }
 

@@ -27,8 +27,8 @@ class StdioManager {
       return;
     }
 
-    this.originalStdoutWrite = process.stdout.write.bind(process.stdout);
-    this.originalStderrWrite = process.stderr.write.bind(process.stderr);
+    this.originalStdoutWrite = process.stdout.write;
+    this.originalStderrWrite = process.stderr.write;
 
     // @ts-expect-error - overriding built-in write
     process.stdout.write = (
@@ -43,7 +43,7 @@ class StdioManager {
       }
 
       const actualCallback = typeof encoding === 'function' ? encoding : callback;
-      return this.originalStdoutWrite!(chunk, encoding as BufferEncoding, actualCallback);
+      return this.originalStdoutWrite!.call(process.stdout, chunk, encoding as BufferEncoding, actualCallback);
     };
 
     // @ts-expect-error - overriding built-in write
@@ -59,7 +59,7 @@ class StdioManager {
       }
 
       const actualCallback = typeof encoding === 'function' ? encoding : callback;
-      return this.originalStderrWrite!(chunk, encoding as BufferEncoding, actualCallback);
+      return this.originalStderrWrite!.call(process.stderr, chunk, encoding as BufferEncoding, actualCallback);
     };
 
     this.isHijacked = true;

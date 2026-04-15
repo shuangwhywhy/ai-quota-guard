@@ -5,6 +5,11 @@ export default tseslint.config(
   {
     ignores: ['dist/**', 'coverage/**', 'node_modules/**', 'example/vite-demo/dist/**', 'docs/**', 'scratch/**'],
   },
+  {
+    linterOptions: {
+      reportUnusedDisableDirectives: 'error',
+    },
+  },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {

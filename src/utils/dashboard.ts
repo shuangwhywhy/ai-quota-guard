@@ -130,6 +130,7 @@ export const renderDashboard = async () => {
             const header = [
                 chalk.bold.white(`\n  🛡️  Quota Guard Real-time Dashboard`),
                 chalk.gray(`  ${timeStr}${padding}${urlStr}`),
+                chalk.bgBlue.white.bold(`  📡 Proxy: http://localhost:1989  `) + chalk.gray(` (Point baseURL here for browser interception)`),
                 ''
             ];
 
