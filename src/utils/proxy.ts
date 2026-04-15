@@ -66,11 +66,10 @@ export class ProxyServer {
               return;
             } catch { /* try next */ }
           }
-          res.writeHead(404);
-          res.end('Quota Guard: register.js not found in dist/. Please run build.');
-        } catch {
+          throw new Error('register.js not found');
+        } catch (err) {
           res.writeHead(500);
-          res.end('Internal Server Error');
+          res.end(`Internal Server Error: ${String(err)}`);
         }
         return;
       }
@@ -101,10 +100,6 @@ export class ProxyServer {
           targetPath = '/' + parts.slice(1).join('/');
       } else {
           // Default fallbacks if no clear hostname in path
-          if (fullPath.includes('/v1/chat/completions')) targetHostname = 'api.openai.com';
-          else if (fullPath.includes('/v1/messages')) targetHostname = 'api.anthropic.com';
-          else if (fullPath.includes('generateContent')) targetHostname = 'generativelanguage.googleapis.com';
-          
           targetPath = fullPath;
       }
 

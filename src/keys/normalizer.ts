@@ -74,7 +74,7 @@ export const generateStableKey = async (
   body?: string | unknown, 
   strategy: 'intelligent' | 'exact' | ((u: string, m: string, b: unknown) => unknown) = 'intelligent',
   headers?: Record<string, string>
-): Promise<string | null> => {
+): Promise<string> => {
   const urlStr = url.toString();
   let normalizedBody = '';
   let extraContext = '';

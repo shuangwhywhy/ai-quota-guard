@@ -111,4 +111,46 @@ describe('StdioManager', () => {
         process.stdout.write('public async');
         expect(globalStats.addLog).toHaveBeenCalledWith('public async');
     });
+
+    it('handles encoding as callback branch', () => {
+        const realWrite = process.stdout.write;
+        let cbCalled = false;
+        (process.stdout as any).write = (_chunk: any, _enc: any, cb: any) => {
+            if (typeof cb === 'function') cb();
+        };
+
+        try {
+            stdioManager.hijack();
+            // @ts-expect-error - testing invalid call signature
+            process.stdout.write('test', () => { cbCalled = true; });
+            expect(cbCalled).toBe(true);
+        } finally {
+            process.stdout.write = realWrite;
+            stdioManager.restore();
+        }
+    });
+
+    it('handles stderr encoding as callback branch', () => {
+        const realStderr = process.stderr.write;
+        let cbCalled = false;
+        (process.stderr as any).write = (_chunk: any, _enc: any, cb: any) => {
+            if (typeof cb === 'function') cb();
+        };
+
+        try {
+            stdioManager.hijack();
+            // @ts-expect-error - testing invalid call signature
+            process.stderr.write('test', () => { cbCalled = true; });
+            expect(cbCalled).toBe(true);
+        } finally {
+            process.stderr.write = realStderr;
+            stdioManager.restore();
+        }
+    });
+
+    it('covers singleton branch', () => {
+        // Access instance to cover singleton instantiation branch
+        const instance = (stdioManager.constructor as any).getInstance();
+        expect(instance).toBe(stdioManager);
+    });
 });

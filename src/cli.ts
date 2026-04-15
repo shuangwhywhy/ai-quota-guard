@@ -246,11 +246,6 @@ Examples:
     // Default to implicit run
     return runWithGuard(argv, cwd);
   }
-
-
-
-  console.error(`Unknown command: ${command}`);
-  process.exit(1);
 }
 
 // Only run if this is the main module

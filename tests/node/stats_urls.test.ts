@@ -157,4 +157,14 @@ describe('StatsCollector URL Detection', () => {
 
     vi.unstubAllGlobals();
   });
+
+  it('shifts logs when exceeding buffer limit (300)', () => {
+      globalStats.clear();
+      for (let i = 0; i < 305; i++) {
+          globalStats.addLog(`line ${i}`);
+      }
+      const logs = globalStats.getLogs();
+      expect(logs.length).toBe(300);
+      expect(logs[0]).toBe('line 5');
+  });
 });

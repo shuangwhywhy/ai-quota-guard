@@ -59,8 +59,6 @@ export class GuardPipeline {
         const bodyText = await this.safeCloneText(request);
         const key = await generateStableKey(requestUrl, method, bodyText, effectiveConfig.cacheKeyStrategy, headersMap);
 
-        if (!key) return {};
-
         this.emitAudit({ type: 'request_started', key, url: requestUrl, timestamp: Date.now() });
 
         const currentSnapshot: RequestMetadata = { url: requestUrl, method, headers: headersMap };
