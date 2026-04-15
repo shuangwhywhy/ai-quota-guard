@@ -42,10 +42,17 @@ export class ProxyServer {
           const path = await import('node:path');
           // In dev, we can find it in dist/
           const possiblePaths = [
+            // 1. Relative to this file in dist/ (bundled or unbundled)
+            path.join(__dirname, 'register.js'),
+            path.join(__dirname, 'register.mjs'),
+            path.join(__dirname, '../register.js'),
+            path.join(__dirname, '../register.mjs'),
+            // 2. Relative to process.cwd() (original behavior, keep as fallback)
             path.join(process.cwd(), 'dist', 'register.js'),
-            path.join(process.cwd(), 'dist', 'register.mjs'), // Try ESM if JS not found
-            // Fallback for direct node execution from src (unlikely in prod but helpful for us)
-            path.join(process.cwd(), 'src', 'register.ts') 
+            path.join(process.cwd(), 'dist', 'register.mjs'),
+            // 3. Source fallback for local dev
+            path.join(__dirname, '../register.ts'),
+            path.join(__dirname, '../../src/register.ts')
           ];
 
           for (const p of possiblePaths) {
