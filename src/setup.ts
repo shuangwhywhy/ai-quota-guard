@@ -1,36 +1,13 @@
 /* eslint-disable no-console */
 import { setConfig, QuotaGuardConfig, getConfig, ConfigSource } from './config.js';
 import { applyGlobalGuards } from './core/interceptor.js';
+import { stdioManager } from './utils/stdio.js';
 import { startDashboard } from './utils/dashboard.js';
-import { globalStats } from './utils/stats-collector.js';
 
 export const injectQuotaGuard = async (config?: Partial<QuotaGuardConfig> & { configPath?: string }) => {
   // 0. Early Passive Log Capture (Pass-through mode)
   // Ensure we record EVERYTHING from the very start, even before we know if dashboard is enabled.
-  if (typeof process !== 'undefined' && process.stdout && process.stdout.write) {
-    const originalWrite = process.stdout.write;
-    
-    process.stdout.write = function(
-        chunk: string | Uint8Array, 
-        encoding?: string | ((error?: Error | null) => void), 
-        callback?: (error?: Error | null) => void
-    ) {
-        const str = typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk);
-        globalStats.addLog(str);
-        return originalWrite.apply(process.stdout, [chunk, encoding as BufferEncoding, callback as (error?: Error | null) => void]);
-    };
-
-    const originalErrWrite = process.stderr.write;
-    process.stderr.write = function(
-        chunk: string | Uint8Array, 
-        encoding?: string | ((error?: Error | null) => void), 
-        callback?: (error?: Error | null) => void
-    ) {
-        const str = typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk);
-        globalStats.addLog(str); // Already flavored in dashboard if needed, but here it's raw
-        return originalErrWrite.apply(process.stderr, [chunk, encoding as BufferEncoding, callback as (error?: Error | null) => void]);
-    };
-  }
+  stdioManager.hijack();
 
   const isProd = typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'production';
 
