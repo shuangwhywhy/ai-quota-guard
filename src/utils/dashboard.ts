@@ -1,4 +1,5 @@
 import { globalStats } from './stats-collector.js';
+import type { ChalkInstance } from 'chalk';
 
 /**
  * Quota Guard Terminal Dashboard: Real-time, event-driven.
@@ -9,7 +10,7 @@ import { globalStats } from './stats-collector.js';
  */
 
 let dashboardInterval: NodeJS.Timeout | null = null;
-let lastUpdate: { (text: string): void; done(): void } | null = null;
+let lastUpdate: ((...text: string[]) => void) & { clear(): void; done(): void; persist(...text: string[]): void } | null = null;
 let originalStdoutWrite: (typeof process.stdout.write) | null = null;
 let originalStderrWrite: (typeof process.stderr.write) | null = null;
 let unsubscribe: (() => void) | null = null;
@@ -25,8 +26,7 @@ const hijackStdio = () => {
     originalStdoutWrite = process.stdout.write;
     originalStderrWrite = process.stderr.write;
 
-    // @ts-expect-error - overriding native stdout.write
-    process.stdout.write = (chunk: Uint8Array | string, encoding?: BufferEncoding | ((error?: Error | null) => void), callback?: (error?: Error | null) => void) => {
+    process.stdout.write = (chunk: Uint8Array | string, encoding?: BufferEncoding | ((error?: Error | null) => void), callback?: (error?: Error | null) => void): boolean => {
         const str = typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk);
         
         // Temporarily unsubscribe during the actual write to prevent recursion if we were to render here
@@ -38,8 +38,7 @@ const hijackStdio = () => {
         return true;
     };
 
-    // @ts-expect-error - overriding native stderr.write
-    process.stderr.write = (chunk: Uint8Array | string, encoding?: BufferEncoding | ((error?: Error | null) => void), callback?: (error?: Error | null) => void) => {
+    process.stderr.write = (chunk: Uint8Array | string, encoding?: BufferEncoding | ((error?: Error | null) => void), callback?: (error?: Error | null) => void): boolean => {
         const str = typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk);
         globalStats.addLog(str); 
         const cb = typeof encoding === 'function' ? encoding : callback;
@@ -63,19 +62,24 @@ const restoreStdio = () => {
 };
 
 // Global chalk instance for hijacking
-let chalk: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+let chalkInstance: ChalkInstance | null = null;
 
 export const renderDashboard = async () => {
     if (!isNode) return;
 
     try {
         // Dynamic imports to prevent browser crashes
-        const { default: Table } = await import('cli-table3');
-        const { default: logUpdate } = await import('log-update');
-        if (!chalk) {
+        const { default: Table } = await import('cli-table3') as unknown as { default: CliTable3 };
+        const { default: logUpdate } = await import('log-update') as unknown as { default: typeof lastUpdate };
+        
+        if (!chalkInstance) {
             const mod = await import('chalk');
-            chalk = mod.default;
+            chalkInstance = mod.default;
         }
+        
+        // Final guard for types
+        if (!chalkInstance) return;
+        const chalk = chalkInstance;
 
         const terminalWidth = process.stdout.columns || 80;
         const terminalHeight = process.stdout.rows || 30;
@@ -172,15 +176,20 @@ export const renderDashboard = async () => {
 
         // 4. Original Terminal Output (Dynamic Height)
         // Estimate lines used by tables and headers (~22 lines)
-        const linesUsed = 24; 
+        const linesUsed = 26; 
         const logLinesAvailable = Math.max(5, terminalHeight - linesUsed);
-        
-        // Prepare log content to maintain color and structure
-        const separator = chalk.gray('─'.repeat(mainWidth));
         
         // We join parts of multi-line chunks to ensure we don't exceed window
         const allLogLines = logs.join('').split('\n');
         const displayLogs = allLogLines.slice(-logLinesAvailable).join('\n');
+
+        const logsTable = new Table({
+            colWidths: [mainWidth],
+            wordWrap: false, // Keep raw formatting as much as possible
+            style: { 'padding-left': 1, 'padding-right': 1 }
+        });
+
+        logsTable.push([displayLogs || chalk.italic.gray('(Waiting for output...)')]);
 
         // Final Output Assembly
         const output = [
@@ -191,9 +200,7 @@ export const renderDashboard = async () => {
             `\n  ${chalk.bold.cyan('📡 Recent AI Activity')}`,
             recentTable.toString(),
             `\n  ${chalk.bold.yellow('📜 Original Terminal Output')}`,
-            separator,
-            displayLogs || chalk.italic.gray('  (Waiting for output...)'),
-            separator,
+            logsTable.toString(),
             `\n  ${chalk.gray('  (Press Ctrl+C to stop dashboard)')}\n`
         ].join('\n');
 

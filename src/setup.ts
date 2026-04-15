@@ -1,4 +1,5 @@
-import { setConfig, QuotaGuardConfig, getConfig } from './config.js';
+/* eslint-disable no-console */
+import { setConfig, QuotaGuardConfig, getConfig, ConfigSource } from './config.js';
 import { applyGlobalGuards } from './core/interceptor.js';
 import { startDashboard } from './utils/dashboard.js';
 import { globalStats } from './utils/stats-collector.js';
@@ -16,8 +17,7 @@ export const injectQuotaGuard = async (config?: Partial<QuotaGuardConfig> & { co
     ) {
         const str = typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk);
         globalStats.addLog(str);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return originalWrite.apply(process.stdout, [chunk, encoding as any, callback as any]);
+        return originalWrite.apply(process.stdout, [chunk, encoding as BufferEncoding, callback as (error?: Error | null) => void]);
     };
 
     const originalErrWrite = process.stderr.write;
@@ -28,8 +28,7 @@ export const injectQuotaGuard = async (config?: Partial<QuotaGuardConfig> & { co
     ) {
         const str = typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk);
         globalStats.addLog(str); // Already flavored in dashboard if needed, but here it's raw
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        return originalErrWrite.apply(process.stderr, [chunk, encoding as any, callback as any]);
+        return originalErrWrite.apply(process.stderr, [chunk, encoding as BufferEncoding, callback as (error?: Error | null) => void]);
     };
   }
 
@@ -37,7 +36,6 @@ export const injectQuotaGuard = async (config?: Partial<QuotaGuardConfig> & { co
 
   // 0. Production Safety Check: Absolutely no-op in production to prevent performance or security leakage.
   if (isProd) {
-    // eslint-disable-next-line no-console
     console.log(
       `┌───────────────────────────────────────┐\n` +
       `│ [Quota Guard] v${typeof PKG_VERSION !== 'undefined' ? PKG_VERSION : '?.?.?'} READY            │\n` +
@@ -60,7 +58,6 @@ export const injectQuotaGuard = async (config?: Partial<QuotaGuardConfig> & { co
       try {
         envVarConfig = JSON.parse(process.env.QUOTA_GUARD_CONFIG);
       } catch {
-        // eslint-disable-next-line no-console
         console.warn('[Quota Guard] Failed to parse QUOTA_GUARD_CONFIG env var. It must be valid JSON.');
       }
     }
@@ -82,7 +79,6 @@ export const injectQuotaGuard = async (config?: Partial<QuotaGuardConfig> & { co
   // 3. Layered Application
   // We call setConfig for each discovered layer. 
   // The internal registry handles the actual prioritized merge.
-  const { ConfigSource } = await import('./config.js');
 
   if (globalConfig) {
     setConfig(globalConfig, ConfigSource.Global);
@@ -103,10 +99,11 @@ export const injectQuotaGuard = async (config?: Partial<QuotaGuardConfig> & { co
   if (config) {
     // Note: 'config' contains both config options AND 'configPath'.
     // We only pass the actual config options to setConfig.
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { configPath, ...options } = config;
+    const options = { ...config };
+    delete (options as { configPath?: string }).configPath;
+
     if (Object.keys(options).length > 0) {
-      setConfig(options, ConfigSource.Manual);
+      setConfig(options as Partial<QuotaGuardConfig>, ConfigSource.Manual);
     }
   }
 
@@ -115,7 +112,6 @@ export const injectQuotaGuard = async (config?: Partial<QuotaGuardConfig> & { co
     await startDashboard();
   }
 
-  // eslint-disable-next-line no-console
   console.log(
     `┌───────────────────────────────────────┐\n` +
     `│ [Quota Guard] v${typeof PKG_VERSION !== 'undefined' ? PKG_VERSION : '?.?.?'} READY            │\n` +

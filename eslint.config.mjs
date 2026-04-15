@@ -3,7 +3,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'coverage/**', 'node_modules/**', 'example/vite-demo/dist/**', 'docs/**'],
+    ignores: ['dist/**', 'coverage/**', 'node_modules/**', 'example/vite-demo/dist/**', 'docs/**', 'scratch/**'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
@@ -17,7 +17,7 @@ export default tseslint.config(
     },
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/no-unused-vars': ['error', { 'argsIgnorePattern': '^_' }],
+      '@typescript-eslint/no-unused-vars': ['error', { 'argsIgnorePattern': '^_', 'varsIgnorePattern': '^_' }],
       'no-console': 'warn',
     },
   },
