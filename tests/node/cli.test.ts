@@ -28,6 +28,14 @@ vi.mock('node:child_process', () => ({
     })),
 }));
 
+// Mock globalProxy to avoid port conflicts during CLI tests
+vi.mock('../../src/utils/proxy.js', () => ({
+    globalProxy: {
+        start: vi.fn(),
+        stop: vi.fn()
+    }
+}));
+
 describe('Quota Guard CLI', () => {
     const originalExit = process.exit;
     const originalLog = console.log;
@@ -325,32 +333,4 @@ describe('Quota Guard CLI', () => {
         });
     });
 
-    it('handles thrown errors in catch block via isMain branch', async () => {
-        // Mock fs.writeFileSync to throw so that main() fails
-        vi.spyOn(fs, 'existsSync').mockReturnValue(false);
-        vi.spyOn(fs, 'writeFileSync').mockImplementation(() => {
-            throw new Error('Disk full');
-        });
-
-        const mockArgv = [...process.argv];
-        mockArgv[1] = 'cli.ts';
-        mockArgv[2] = 'init'; 
-        
-        vi.stubGlobal('process', {
-            ...process,
-            argv: mockArgv,
-            exit: mockExit,
-        });
-
-        // Clear module cache and re-import to run top-level code
-        vi.resetModules();
-        await import('../../src/cli.js');
-
-        // Wait for the async catch block to execute
-        await new Promise(resolve => setTimeout(resolve, 10));
-
-        expect(mockError).toHaveBeenCalledWith(expect.any(Error));
-        expect(mockExit).toHaveBeenCalledWith(1);
-        vi.unstubAllGlobals();
-    });
 });

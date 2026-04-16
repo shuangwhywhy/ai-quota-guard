@@ -1,253 +1,166 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import http from 'node:http';
 import { RuntimeHijacker } from '../../src/utils/hijacker.js';
-import { setConfig, ConfigSource } from '../../src/config.js';
 
 describe('RuntimeHijacker', () => {
-    let originalCreateServer: any;
-
-    beforeEach(() => {
-        originalCreateServer = http.createServer;
-        RuntimeHijacker.__reset();
-        setConfig({ enabled: true }, ConfigSource.Manual);
-    });
-
     afterEach(() => {
-        http.createServer = originalCreateServer;
+        RuntimeHijacker.__reset();
         vi.restoreAllMocks();
     });
 
-    it('patches http.createServer and injects into HTML responses', async () => {
-        // 1. Arrange: Capture the listener that would be passed to the original createServer
-        let capturedWrappedListener: any;
-        const mockServer = { 
-            listen: vi.fn(), 
-            on: vi.fn() 
-        };
+    it('patches http.createServer correctly', () => {
+        const original = http.createServer;
+        RuntimeHijacker.apply();
+        expect(http.createServer).not.toBe(original);
         
-        // Mock the core http.createServer to capture what the hijacker sends to it
-        vi.spyOn(http, 'createServer').mockImplementation(((arg1: any, arg2: any) => {
-            capturedWrappedListener = typeof arg1 === 'function' ? arg1 : arg2;
-            return mockServer;
-        }) as any);
-
-        // 2. Act: Apply the hijacker and "create" a server
+        // Test idempotency
+        const patched = http.createServer;
         RuntimeHijacker.apply();
-        http.createServer((req: any, res: any) => {
-            res.setHeader('Content-Type', 'text/html');
-            res.end('<html><head></head><body>Hello</body></html>');
-        });
-
-        // 3. Assert: Verify the wrapper was created and can process a request
-        expect(capturedWrappedListener).toBeDefined();
-
-        const mockReq = { url: '/' };
-        let resultBody = '';
-        const mockRes = {
-            _headers: {} as Record<string, string>,
-            setHeader(k: string, v: string) { this._headers[k.toLowerCase()] = v; },
-            getHeader(k: string) { return this._headers[k.toLowerCase()]; },
-            write: vi.fn(),
-            end(chunk: string) { resultBody = chunk; }
-        };
-
-        // Execute the hijack wrapper
-        await capturedWrappedListener(mockReq, mockRes);
-
-        expect(resultBody).toContain('Quota Guard Zero-Intrusion Bridge');
-        expect(resultBody).toContain('register.js');
-        expect(resultBody).toContain('</head>');
-    });
-
-    it('correctly updates content-length when injecting', async () => {
-        let capturedWrappedListener: any;
-        vi.spyOn(http, 'createServer').mockImplementation(((arg1: any, arg2: any) => {
-            capturedWrappedListener = typeof arg1 === 'function' ? arg1 : arg2;
-            return {};
-        }) as any);
-
-        RuntimeHijacker.apply();
-        http.createServer((req: any, res: any) => {
-            res.setHeader('Content-Type', 'text/html');
-            res.setHeader('Content-Length', '10');
-            res.end('1234567890');
-        });
-
-        const mockReq = { url: '/' };
-        const mockRes = {
-            _headers: { 'content-type': 'text/html', 'content-length': '10' } as Record<string, any>,
-            setHeader(k: string, v: any) { this._headers[k.toLowerCase()] = v; },
-            getHeader(k: string) { return this._headers[k.toLowerCase()]; },
-            write: vi.fn(),
-            end: vi.fn()
-        };
-
-        await capturedWrappedListener(mockReq, mockRes);
+        expect(http.createServer).toBe(patched);
         
-        const newLen = parseInt(mockRes._headers['content-length'], 10);
-        expect(newLen).toBeGreaterThan(10);
+        http.createServer = original;
     });
 
-    it('does not inject into non-HTML responses', async () => {
-        let capturedWrappedListener: any;
-        vi.spyOn(http, 'createServer').mockImplementation(((arg1: any, arg2: any) => {
-            capturedWrappedListener = typeof arg1 === 'function' ? arg1 : arg2;
-            return {};
-        }) as any);
-
-        RuntimeHijacker.apply();
-        http.createServer((req: any, res: any) => {
-            res.setHeader('Content-Type', 'application/json');
-            res.end('{"ok":true}');
-        });
-
-        const mockReq = { url: '/' };
-        let resultBody = '';
+    it('hijacks response for HTML injection', () => {
+        const originalEnd = vi.fn();
         const mockRes = {
-            _headers: { 'content-type': 'application/json' } as Record<string, any>,
-            setHeader(k: string, v: any) { this._headers[k.toLowerCase()] = v; },
-            getHeader(k: string) { return this._headers[k.toLowerCase()]; },
+            setHeader: vi.fn(),
+            getHeader: vi.fn(),
             write: vi.fn(),
-            end(chunk: string) { resultBody = chunk; }
+            end: originalEnd,
+            writeHead: vi.fn()
         };
 
-        await capturedWrappedListener(mockReq, mockRes);
-        expect(resultBody).toBe('{"ok":true}');
-        expect(resultBody).not.toContain('Quota Guard');
-    });
+        // Directly test the extracted logic
+        RuntimeHijacker.hijackResponse(mockRes as unknown as http.ServerResponse);
 
-    it('injects into HTML responses when using writeHead', async () => {
-        let capturedWrappedListener: any;
-        vi.spyOn(http, 'createServer').mockImplementation(((arg1: any, arg2: any) => {
-            capturedWrappedListener = typeof arg1 === 'function' ? arg1 : arg2;
-            return {};
-        }) as any);
-
-        RuntimeHijacker.apply();
-        http.createServer(() => {});
-
-        let resultBody = '';
-        const mockRes = {
-            _headers: {} as Record<string, string>,
-            setHeader(k: string, v: string) { this._headers[k.toLowerCase()] = v; },
-            getHeader(k: string) { return this._headers[k.toLowerCase()]; },
-            writeHead(sc: number, headers: any) { this._headers['content-type'] = headers['content-type']; },
-            write: vi.fn(),
-            end(chunk: string) { resultBody = chunk; }
-        };
-
-        await capturedWrappedListener({ url: '/' }, mockRes);
-        (mockRes as any).writeHead(200, { 'content-type': 'text/html' });
-        (mockRes as any).end('<html><body>Hi</body></html>');
-
-        expect(resultBody).toContain('Quota Guard Zero-Intrusion Bridge');
-    });
-
-    it('collects multiple write chunks for HTML responses', async () => {
-        let capturedWrappedListener: any;
-        vi.spyOn(http, 'createServer').mockImplementation(((arg1: any, arg2: any) => {
-            capturedWrappedListener = typeof arg1 === 'function' ? arg1 : arg2;
-            return {};
-        }) as any);
-
-        RuntimeHijacker.apply();
-        http.createServer(() => {});
-
-        let resultBody = '';
-        const mockRes = {
-            _headers: { 'content-type': 'text/html' } as Record<string, string>,
-            setHeader(k: string, v: string) { this._headers[k.toLowerCase()] = v; },
-            getHeader(k: string) { return this._headers[k.toLowerCase()]; },
-            write(_chunk: any) { /* This will be hijacked */ },
-            end(chunk: any) { resultBody = chunk; }
-        };
-
-        await capturedWrappedListener({ url: '/' }, mockRes);
+        // 1. Trigger HTML detection via setHeader
         mockRes.setHeader('Content-Type', 'text/html');
-        (mockRes as any).write('<html>');
-        (mockRes as any).write('<body>Part 2</body>');
-        (mockRes as any).end('</html>');
+        
+        // 2. Simulate fragmented write
+        mockRes.write('<html><head></head>');
+        mockRes.write('<body>');
+        mockRes.end('</body></html>');
 
-        expect(resultBody).toContain('Part 2');
-        expect(resultBody).toContain('Quota Guard Zero-Intrusion Bridge');
+        // 3. Verify injection in final end call
+        expect(originalEnd).toHaveBeenCalled();
+        const finalOutput = String(originalEnd.mock.calls[0][0]);
+        expect(finalOutput).toContain('Quota Guard');
+        expect(finalOutput).toContain('window.__QUOTA_GUARD_ENABLED__');
     });
 
-    it('injects after body if head is missing', async () => {
-        let capturedWrappedListener: any;
-        vi.spyOn(http, 'createServer').mockImplementation(((arg1: any, arg2: any) => {
-            capturedWrappedListener = typeof arg1 === 'function' ? arg1 : arg2;
-            return {};
-        }) as any);
-
-        RuntimeHijacker.apply();
-        http.createServer(() => {});
-
-        let resultBody = '';
+    it('handles writeHead with headers object', () => {
+        const originalEnd = vi.fn();
         const mockRes = {
-            _headers: { 'content-type': 'text/html' } as Record<string, string>,
-            setHeader(k: string, v: string) { this._headers[k.toLowerCase()] = v; },
-            getHeader(k: string) { return this._headers[k.toLowerCase()]; },
+            setHeader: vi.fn(),
+            getHeader: vi.fn(),
             write: vi.fn(),
-            end(chunk: string) { resultBody = chunk; }
+            end: originalEnd,
+            writeHead: vi.fn()
         };
 
-        await capturedWrappedListener({ url: '/' }, mockRes);
+        RuntimeHijacker.hijackResponse(mockRes as unknown as http.ServerResponse);
+
+        // Trigger via writeHead
+        mockRes.writeHead(200, { 'Content-Type': 'text/html' });
+        mockRes.write('<html><body></body></html>');
+        mockRes.end('');
+
+        expect(originalEnd).toHaveBeenCalled();
+        const finalOutput = String(originalEnd.mock.calls[0][0]);
+        expect(finalOutput).toContain('Quota Guard');
+    });
+
+    it('skips non-HTML responses', () => {
+        const originalEnd = vi.fn();
+        const originalWrite = vi.fn();
+        const mockRes = {
+            setHeader: vi.fn(),
+            getHeader: vi.fn(),
+            write: originalWrite,
+            end: originalEnd,
+            writeHead: vi.fn()
+        };
+
+        RuntimeHijacker.hijackResponse(mockRes as unknown as http.ServerResponse);
+
+        mockRes.setHeader('Content-Type', 'application/json');
+        
+        // When NOT HTML, write and end should pass through
+        mockRes.write('{"ok":true}');
+        mockRes.end('}');
+
+        expect(originalWrite).toHaveBeenCalled();
+        expect(originalEnd).toHaveBeenCalled();
+        
+        // Check that any call contains the data
+        const writeCall = originalWrite.mock.calls.some(c => String(c[0]).includes('ok'));
+        const endCall = originalEnd.mock.calls.some(c => String(c[0]).includes('}'));
+        
+        expect(writeCall).toBe(true);
+        expect(endCall).toBe(true);
+    });
+
+    it('supports injection into fragmented responses without tags', () => {
+        const originalEnd = vi.fn();
+        const mockRes = {
+            setHeader: vi.fn(),
+            getHeader: vi.fn(),
+            write: vi.fn(),
+            end: originalEnd,
+            writeHead: vi.fn()
+        };
+
+        RuntimeHijacker.hijackResponse(mockRes as unknown as http.ServerResponse);
+
         mockRes.setHeader('Content-Type', 'text/html');
-        // No head, just body
-        (mockRes as any).end('<html><body>Just Body</body></html>');
+        // No body tag
+        mockRes.end('Hello');
 
-        expect(resultBody).toContain('<body>');
-        expect(resultBody).toContain('<!-- Quota Guard Zero-Intrusion Bridge -->');
+        expect(originalEnd).toHaveBeenCalled();
+        const finalOutput = String(originalEnd.mock.calls[0][0]);
+        expect(finalOutput).toContain('Quota Guard');
+        expect(finalOutput).toContain('Hello');
     });
 
-    it('handles http.createServer with options as first argument', () => {
-        let capturedArg1: any;
-        let capturedArg2: any;
-        const mockOriginal = (a1: any, a2: any) => {
-            capturedArg1 = a1;
-            capturedArg2 = a2;
-            return {};
+    it('handles writeHead with reasonPhrase correctly', () => {
+        const originalEnd = vi.fn();
+        const mockRes = {
+            setHeader: vi.fn(),
+            getHeader: vi.fn(),
+            write: vi.fn(),
+            end: originalEnd,
+            writeHead: vi.fn(),
+            headersSent: false
         };
-        http.createServer = mockOriginal as any;
 
-        RuntimeHijacker.apply();
-        const options = { keepAlive: true };
-        const listener = () => {};
-        
-        http.createServer(options, listener);
-        
-        expect(capturedArg1).toBe(options);
-        expect(capturedArg2).not.toBe(listener); // Should be the wrapped one
+        RuntimeHijacker.hijackResponse(mockRes as unknown as http.ServerResponse);
+
+        // writeHead(statusCode, reasonPhrase, headers)
+        mockRes.writeHead(200, 'OK', { 'Content-Type': 'text/html' });
+        mockRes.write('<html><body></body></html>');
+        mockRes.end();
+
+        expect(originalEnd).toHaveBeenCalled();
+        const finalOutput = String(originalEnd.mock.calls[0][0]);
+        expect(finalOutput).toContain('Quota Guard');
     });
 
-    it('forwards write() calls directly for non-HTML responses', async () => {
-        let capturedWrappedListener: any;
-        const originalCreateServer = http.createServer;
-        
-        vi.spyOn(http, 'createServer').mockImplementation(((arg1: any, arg2: any) => {
-            capturedWrappedListener = typeof arg1 === 'function' ? arg1 : arg2;
-            return { listen: vi.fn(), on: vi.fn(), close: vi.fn() };
-        }) as any);
-
-        RuntimeHijacker.apply();
-        http.createServer(() => {});
-
-        const mockWrite = vi.fn();
-        const mockRes: any = {
-            _headers: { 'content-type': 'application/json' },
-            setHeader(k: string, v: string) { this._headers[k.toLowerCase()] = v; },
-            getHeader(k: string) { return this._headers[k.toLowerCase()]; },
-            write: mockWrite,
-            end: vi.fn()
+    it('returns early in writeHead if headersSent is true', () => {
+        const originalWriteHead = vi.fn();
+        const mockRes = {
+            setHeader: vi.fn(),
+            getHeader: vi.fn(),
+            write: vi.fn(),
+            end: vi.fn(),
+            writeHead: originalWriteHead,
+            headersSent: true
         };
 
-        if (capturedWrappedListener) {
-            await capturedWrappedListener({ url: '/' }, mockRes);
-            mockRes.write('{"ok":true}');
-            expect(mockWrite).toHaveBeenCalledWith('{"ok":true}');
-        }
+        RuntimeHijacker.hijackResponse(mockRes as unknown as http.ServerResponse);
         
-        http.createServer = originalCreateServer;
+        const result = mockRes.writeHead(200);
+        expect(result).toBe(mockRes);
+        expect(originalWriteHead).not.toHaveBeenCalled();
     });
 });

@@ -12,9 +12,7 @@ class StdioManager {
   private isHijacked = false;
 
   public static getInstance(): StdioManager {
-    if (!this.instance) {
-      this.instance = new StdioManager();
-    }
+    this.instance = this.instance || new StdioManager();
     return this.instance;
   }
 
@@ -36,14 +34,20 @@ class StdioManager {
       encoding?: BufferEncoding | ((error?: Error | null) => void),
       callback?: (error?: Error | null) => void
     ): boolean => {
+      let actualEncoding = encoding;
+      let actualCallback = callback;
+      if (typeof encoding === 'function') {
+        actualCallback = encoding;
+        actualEncoding = undefined;
+      }
+
       const str = typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk);
       
       if (this.isCapturing) {
         globalStats.addLog(str);
       }
 
-      const actualCallback = typeof encoding === 'function' ? encoding : callback;
-      return this.originalStdoutWrite!.call(process.stdout, chunk, encoding as BufferEncoding, actualCallback);
+      return this.originalStdoutWrite!.call(process.stdout, chunk, actualEncoding as BufferEncoding, actualCallback);
     };
 
     // @ts-expect-error - overriding built-in write
@@ -52,14 +56,20 @@ class StdioManager {
       encoding?: BufferEncoding | ((error?: Error | null) => void),
       callback?: (error?: Error | null) => void
     ): boolean => {
+      let actualEncoding = encoding;
+      let actualCallback = callback;
+      if (typeof encoding === 'function') {
+        actualCallback = encoding;
+        actualEncoding = undefined;
+      }
+
       const str = typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk);
 
       if (this.isCapturing) {
         globalStats.addLog(str);
       }
 
-      const actualCallback = typeof encoding === 'function' ? encoding : callback;
-      return this.originalStderrWrite!.call(process.stderr, chunk, encoding as BufferEncoding, actualCallback);
+      return this.originalStderrWrite!.call(process.stderr, chunk, actualEncoding as BufferEncoding, actualCallback);
     };
 
     this.isHijacked = true;
@@ -69,7 +79,6 @@ class StdioManager {
    * Restores original stdout and stderr.
    */
   public restore(): void {
-    if (!this.isHijacked) return;
 
     if (this.originalStdoutWrite) {
       process.stdout.write = this.originalStdoutWrite;

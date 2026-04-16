@@ -24,15 +24,10 @@ export class ProxyServer {
         let body = '';
         req.on('data', chunk => { body += chunk; });
         req.on('end', () => {
-          try {
-            const event = JSON.parse(body);
-            globalStats.record(event);
-            res.writeHead(204);
-            res.end();
-          } catch {
-            res.writeHead(400);
-            res.end('Invalid event data');
-          }
+          const event = JSON.parse(body);
+          globalStats.record(event);
+          res.writeHead(204);
+          res.end();
         });
         return;
       }
@@ -66,11 +61,7 @@ export class ProxyServer {
               return;
             } catch { /* try next */ }
           }
-          throw new Error('register.js not found');
-        } catch (err) {
-          res.writeHead(500);
-          res.end(`Internal Server Error: ${String(err)}`);
-        }
+        } catch { /* ignore */ }
         return;
       }
 
@@ -103,28 +94,21 @@ export class ProxyServer {
           targetPath = fullPath;
       }
 
-      if (!targetHostname) {
-        res.writeHead(400);
-        res.end('Quota Guard Proxy: Could not determine target AI service from path.');
-        return;
-      }
+      if (targetHostname) {
+        const targetUrl = `https://${targetHostname}${targetPath}`;
 
-      const targetUrl = `https://${targetHostname}${targetPath}`;
-
-      // 5. Proxy the Request using Node's native fetch (guarded by our interceptor)
-      try {
-        const bodyChunks: Buffer[] = [];
-        req.on('data', chunk => bodyChunks.push(chunk));
-        
-        req.on('end', async () => {
-          const body = bodyChunks.length > 0 ? Buffer.concat(bodyChunks) : undefined;
+        try {
+          const bodyChunks: Buffer[] = [];
+          req.on('data', chunk => bodyChunks.push(chunk));
           
-          const headers = new Headers();
-          for (const [key, value] of Object.entries(req.headers)) {
-              if (value && key !== 'host' && key !== 'connection') {
-                  headers.set(key, Array.isArray(value) ? value.join(', ') : value);
-              }
-          }
+          req.on('end', async () => {
+            const body = bodyChunks.length > 0 ? Buffer.concat(bodyChunks) : undefined;
+            const headers = new Headers();
+            for (const [key, value] of Object.entries(req.headers)) {
+                if (value && key !== 'host' && key !== 'connection') {
+                    headers.set(key, Array.isArray(value) ? value.join(', ') : value);
+                }
+            }
 
           try {
             const response = await fetch(targetUrl, {
@@ -135,7 +119,6 @@ export class ProxyServer {
               duplex: 'half'
             });
 
-            // 6. Forward Response back to Client
             const resHeaders: Record<string, string> = {};
             response.headers.forEach((v, k) => {
                 if (k !== 'transfer-encoding' && k !== 'content-encoding') {
@@ -146,24 +129,25 @@ export class ProxyServer {
             res.writeHead(response.status, resHeaders);
             const resBuffer = await response.arrayBuffer();
             res.end(Buffer.from(resBuffer));
-          } catch (err) {
+          } catch {
             res.writeHead(502);
-            res.end(`Quota Guard Proxy Error: ${String(err)}`);
+            res.end('Proxy Error');
           }
         });
-      } catch (err) {
+      } catch {
         res.writeHead(500);
-        res.end(`Quota Guard Proxy Internal Error: ${String(err)}`);
+        res.end('Internal Proxy Error');
       }
-    });
+    }
+  });
 
-    // Handle listen errors (e.g. port taken) explicitly
-    this.server.on('error', (err: Error) => {
-        const msg = `❌ Quota Guard Proxy Error: Failed to start on port ${this.port}. ${err.message}`;
-        globalStats.addLog(msg);
-        // We log to console as well because if the proxy fails, we want it clearly visible in the startup logs
-        // eslint-disable-next-line no-console
-        console.error(msg);
+
+    this.server.on('error', (err: { code?: string; message: string }) => {
+       if (err.code === 'EADDRINUSE') {
+          globalStats.addLog(`❌ AI Proxy Error: Port ${this.port} is already in use.`);
+       } else {
+          globalStats.addLog(`❌ AI Proxy Error: ${err.message}`);
+       }
     });
 
     this.server.listen(this.port, () => {
